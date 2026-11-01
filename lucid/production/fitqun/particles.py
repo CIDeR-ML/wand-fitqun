@@ -6,8 +6,10 @@ macros without a scientific-Python stack.
 """
 from __future__ import annotations
 
+from lucid.pdg import PDG_MASS_MEV
+
 # fiTQun's particle hypotheses, by PDG code.
 PDG_NAMES = {11: "e-", 13: "mu-", 211: "pi+"}
 
 # Rest masses (MeV) for the momentum -> kinetic-energy conversion.
-PDG_MASSES = {11: 0.51099895, 13: 105.6583755, 211: 139.57039}
+PDG_MASSES = {pdg: PDG_MASS_MEV[pdg] for pdg in PDG_NAMES}

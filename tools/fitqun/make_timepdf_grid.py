@@ -20,9 +20,14 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
-MASS_MEV = {13: 105.6583755, 11: 0.51099895, 211: 139.57039}
+LUCID_ROOT = Path(__file__).resolve().parents[2]
+if str(LUCID_ROOT) not in sys.path:
+    sys.path.insert(0, str(LUCID_ROOT))
+from lucid.pdg import PDG_MASS_MEV  # noqa: E402
+
 PARTICLE = {13: "mu-", 11: "e-", 211: "pi+"}
 # Cost grows steeply with momentum -- a high-momentum track makes proportionally
 # more photons and LUCiD propagates every one. Two measurements: 12.1 s/event at
@@ -41,7 +46,7 @@ def seconds_per_event(p_mev: float) -> float:
 
 
 def kinetic(p_mev: float, pdg: int) -> float:
-    m = MASS_MEV[abs(pdg)]
+    m = PDG_MASS_MEV[abs(pdg)]
     return math.sqrt(p_mev * p_mev + m * m) - m
 
 
