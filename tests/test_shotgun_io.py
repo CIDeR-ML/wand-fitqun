@@ -64,6 +64,28 @@ def test_waveform_hdf5_roundtrip(tmp_path, tiny_waveform):
     assert out['meta']['mode'] == 'waveform'
     assert float(out['meta']['window_ns']) == 500.0
     assert float(out['meta']['bin_width_ns']) == 1.0
+    assert float(out['meta']['tts_sigma_ns']) == 0.4
+    assert out['source'] is None                     # save_source=False writes none
+
+
+def test_waveform_hdf5_roundtrip_with_source(tmp_path, tiny_waveform):
+    """save_source=True stores the source next to the waveform, value for value."""
+    path = tmp_path / "wf_src.h5"
+    origins = np.array([[0.1, -0.2, 0.3], [1.0, 2.0, -3.0]])
+    dirs = np.array([[0.0, 0.0, 1.0], [0.6, 0.8, 0.0]])
+    src = shotgun_source(origins, dirs, wavelength=np.array([380.0, 450.0]))
+    save_shotgun_waveform(
+        str(path), tiny_waveform, np.zeros(3, np.int32), np.ones(3, np.int32),
+        window_ns=500.0, bin_width_ns=2.0, tts_sigma_ns=1.3, source=src, save_source=True)
+    out = load_shotgun_waveform(str(path), dense=True)
+    assert np.array_equal(out['waveform'], tiny_waveform)
+    got = out['source']
+    np.testing.assert_allclose(got.origins, np.asarray(src.origins))
+    np.testing.assert_allclose(got.directions, np.asarray(src.directions))
+    np.testing.assert_allclose(got.intensities, np.asarray(src.intensities))
+    np.testing.assert_allclose(got.wavelength, np.asarray(src.wavelength))
+    assert float(out['meta']['bin_width_ns']) == 2.0
+    assert float(out['meta']['tts_sigma_ns']) == 1.3
 
 
 def test_streaming_waveform_writer_roundtrip(tmp_path):
