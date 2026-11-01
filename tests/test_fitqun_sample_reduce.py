@@ -92,3 +92,38 @@ def test_shard_round_trip_through_npz(tmp_path):
     assert total.n_detected == 1400
     np.testing.assert_allclose(total.angular_counts[100.0],
                                2 * shard.angular_counts[100.0])
+
+
+def test_merge_shards_is_the_dense_sum_of_every_shard(tmp_path):
+    """``merge_shards`` (the production merge, through ``DenseAccumulator``) must equal filling
+    one dense table with every shard's photons, bin for bin, and sum the angular histograms and
+    the photon counters."""
+    from lucid.production.fitqun.sample_reduce import merge_shards
+
+    rng = np.random.default_rng(3)
+    nb_dir = NB[:4] + (1, 1)
+    dense_s = scattable.ScatTable("sidescattable", NB, BD)
+    dense_d = scattable.ScatTable("sidescattable", nb_dir, BD)
+    paths, ang = [], np.zeros(25)
+    for i, (n_s, n_d) in enumerate(((400, 300), (900, 50), (10, 700))):
+        vs, vd = _coords(rng, n_s), _coords(rng, n_d)
+        dense_s.fill(*vs)
+        dense_d.fill(*vd)
+        a = rng.random(25)
+        ang += a
+        shard = SampleShard(
+            scattered={"sidescattable": SparseCounts.from_values("sidescattable", NB, BD, vs)},
+            direct={"sidescattable": SparseCounts.from_values("sidescattable", nb_dir, BD, vd)},
+            angular_counts={100.0: a}, angular_sumw2={100.0: 2 * a},
+            n_photons=10 * (i + 1), n_detected=n_s + n_d, n_indirect=n_s)
+        paths.append(shard.save(tmp_path / f"shard{i}.npz"))
+
+    merged = merge_shards(paths)
+    np.testing.assert_array_equal(merged.scattered["sidescattable"].table, dense_s.table)
+    np.testing.assert_array_equal(merged.direct["sidescattable"].table, dense_d.table)
+    np.testing.assert_allclose(merged.angular_counts[100.0], ang)
+    np.testing.assert_allclose(merged.angular_sumw2[100.0], 2 * ang)
+    assert (merged.n_photons, merged.n_detected, merged.n_indirect) == (60, 2360, 1310)
+    # and the ratio fiTQun reads is the one formed from those dense tables
+    np.testing.assert_array_equal(merged.ratios()["sidescattable"].table,
+                                  dense_s.ratio_to(dense_d).table)
