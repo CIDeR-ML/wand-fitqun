@@ -9,9 +9,20 @@ each assertion is the point of the test; the value is just what it says.
 Reference tree: WCSim_v1.12.15/fiTQunTuning/Utilities (``cprofile/*`` live in
 that repo's git history, not its unpacked working tree).
 """
-import numpy as np
+import re
+from pathlib import Path
 
-from lucid.production.fitqun import binning, cprofile, scattable
+import numpy as np
+import pytest
+
+from lucid.production.fitqun import binning, cprofile, scattable, timepdf
+
+# The one reference source vendored in-tree; the others are cited by line only.
+MAKEHIST = Path(__file__).resolve().parents[1] / "tools" / "fitqun" / "reference" / "makehistWCSim.cc"
+
+
+def _makehist_source():
+    return MAKEHIST.read_text()
 
 
 # --- scattering table: scatTableLooper.C -------------------------------------
@@ -46,6 +57,16 @@ def test_scattable_axis_bounds_are_the_pmt_enclosed_volume():
     assert cap[2] == (0.0, 390.0)         # cap PMT r
     assert b[4] == (-1.00001, 1.00001)
     assert np.isclose(b[3][1], np.pi * 1.00001)
+
+    # The same formula at SK-like dimensions (R 1690, H/2 1810, 20" PMT radius 25.4 cm).
+    side = scattable.axis_bounds("sidescattable", det_radius_cm=1690.0,
+                                 det_halfheight_cm=1810.0, pmt_radius_cm=25.4)
+    cap = scattable.axis_bounds("topscattable", det_radius_cm=1690.0,
+                                det_halfheight_cm=1810.0, pmt_radius_cm=25.4)
+    assert side[0] == pytest.approx((-1784.6, 1784.6))
+    assert side[1] == pytest.approx((0.0, 1664.6))
+    assert side[2] == pytest.approx((-1784.6, 1784.6))
+    assert cap[2] == pytest.approx((0.0, 1664.6))
 
     # fiTQun.cc's live GetScatRatio selects the table by PMT orientation.
     assert scattable.SURFACE_DIRZ_CUT == 0.8
@@ -134,6 +155,7 @@ def test_charge_pdf_grids():
 
     # makeChargePDFplot.C breaks its read loop on 1500 *before* incrementing, so
     # nqbins=480 while qbinEdg[480]=1500 still reaches the TH1D constructor.
+    assert np.all(np.diff(mu) > 0)
     q = binning.charge_q_edges()
     assert len(q) == 481 and q[0] == 0.0 and q[-1] == 1500.0
     assert np.all(np.diff(q) > 0)
@@ -142,10 +164,43 @@ def test_charge_pdf_grids():
 # --- time PDF and angular response ------------------------------------------
 
 def test_timepdf_axes():
-    """makehistWCSim.cc: TH2D("htimepdf","",400,-100,100,125,-2.,3.)."""
-    assert (binning.TPDF_T_MIN, binning.TPDF_T_MAX, binning.TPDF_N_T_BINS) == (-100.0, 100.0, 400)
+    """makehistWCSim.cc:161, read from the vendored file rather than retyped."""
+    m = re.search(r'TH2D htimepdf\("htimepdf","",(\d+),([-\d.]+),([-\d.]+),'
+                  r'(\d+),([-\d.]+),([-\d.]+)\)', _makehist_source())
+    assert m, f"no htimepdf constructor in {MAKEHIST}"
+    nt, tlo, thi, nmu, mlo, mhi = (float(g) for g in m.groups())
+    assert (binning.TPDF_T_MIN, binning.TPDF_T_MAX, binning.TPDF_N_T_BINS) == (tlo, thi, nt)
     assert (binning.TPDF_LOGMU_MIN, binning.TPDF_LOGMU_MAX,
-            binning.TPDF_N_LOGMU_BINS) == (-2.0, 3.0, 125)
+            binning.TPDF_N_LOGMU_BINS) == (mlo, mhi, nmu)
+    assert (nt, tlo, thi, nmu, mlo, mhi) == (400, -100.0, 100.0, 125, -2.0, 3.0)
+
+
+def test_time_of_flight_constants():
+    """makehistWCSim.cc:28-29, ``const double c0=29.9792458;//[cm/ns]`` and
+    ``double nwtr=1.38;``: the speed of light and the TOF index the corrected time subtracts
+    with. ``corrected_time``'s default n_water must be the reference's, because fiTQun's
+    reconstruction-time TOF uses the same convention."""
+    import inspect
+    src = _makehist_source()
+    c0 = float(re.search(r"const double c0=([\d.]+);", src).group(1))
+    nwtr = float(re.search(r"double nwtr=([\d.]+);", src).group(1))
+    assert (c0, nwtr) == (29.9792458, 1.38)
+    assert timepdf.C_CM_PER_NS == c0
+    assert inspect.signature(timepdf.corrected_time).parameters["n_water"].default == nwtr
+
+
+def test_pdg_masses():
+    """Rest masses in MeV, PDG Review of Particle Physics (2022): e 0.51099895000(15),
+    mu 105.6583755(23), pi+- 139.57039(18). Every truth momentum and every macro's kinetic
+    energy goes through these; a unit slip (GeV) or a mu/pi swap moves all of them."""
+    from lucid.production.fitqun.particles import PDG_MASSES
+    assert PDG_MASSES[11] == pytest.approx(0.51099895, abs=2e-10)
+    assert PDG_MASSES[13] == pytest.approx(105.6583755, abs=3e-7)
+    assert PDG_MASSES[211] == pytest.approx(139.57039, abs=2e-5)
+    # The macro energy for a 1 GeV/c muon and pion: T = sqrt(p^2 + m^2) - m (899.908 MeV for mu).
+    for pdg, m in ((13, 105.6583755), (211, 139.57039)):
+        assert binning.kinetic_energy_mev(pdg, 1000.0) == pytest.approx(
+            np.hypot(1000.0, m) - m, rel=1e-12)
 
 
 def test_angular_response_shells():

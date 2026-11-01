@@ -231,19 +231,30 @@ def test_angular_rejects_inconsistent_detector_extent():
 
 def test_corrected_time_is_zero_for_light_from_the_midpoint():
     """A photon emitted at the track midpoint travelling straight to the PMT
-    at the group velocity has, by construction, t_c = 0."""
+    at the group velocity has, by construction, t_c = 0 (makehistWCSim.cc:284,
+    ``tc = t - t0 - RmidPMT*nwtr/c0 - smid/c0`` with smid = smax/2 at :158).
+
+    The expectation uses the reference's literal c0 = 29.9792458 cm/ns and
+    nwtr = 1.38 (:28-29), and corrected_time is called with its defaults, so a
+    wrong-unit c or a different default index fails here.
+    """
+    c0, nwtr = 29.9792458, 1.38
     vertex = np.array([0.0, 0.0, 0.0])
     direction = np.array([0.0, 0.0, 1.0])
-    s_max, n_water = 200.0, 1.38
+    s_max = 200.0
     pmt = np.array([[300.0, 0.0, 100.0]])
 
     mid = vertex + 0.5 * s_max * direction
-    r_mid = np.linalg.norm(pmt[0] - mid)
-    t_hit = 0.5 * s_max / timepdf.C_CM_PER_NS + r_mid * n_water / timepdf.C_CM_PER_NS
+    r_mid = np.linalg.norm(pmt[0] - mid)            # 300 cm: the PMT is level with the midpoint
+    t_hit = 0.5 * s_max / c0 + r_mid * nwtr / c0    # 3.3356 + 13.8092 ns
 
-    tc = timepdf.corrected_time(np.array([t_hit]), pmt, vertex_cm=vertex,
-                                direction=direction, s_max_cm=s_max, n_water=n_water)
-    np.testing.assert_allclose(tc, [0.0], atol=1e-9)
+    tc = timepdf.corrected_time(np.array([t_hit, t_hit + 3.0]), pmt, vertex_cm=vertex,
+                                direction=direction, s_max_cm=s_max)
+    np.testing.assert_allclose(tc, [0.0, 3.0], atol=1e-9)
+    # The event's emission time is subtracted, not added.
+    tc0 = timepdf.corrected_time(np.array([t_hit + 5.0]), pmt, vertex_cm=vertex,
+                                 direction=direction, s_max_cm=s_max, t0_ns=5.0)
+    np.testing.assert_allclose(tc0, [0.0], atol=1e-9)
 
 
 def test_timepdf_accumulator_bins_and_merges(tmp_path):
@@ -293,22 +304,6 @@ def test_scattable_surface_split_is_by_orientation():
     got = list(scattable.surface_for(dirs))
     assert got == ["topscattable", "sidescattable", "sidescattable",
                    "sidescattable", "botscattable"]
-
-
-def test_scattable_axis_bounds_follow_the_reference_formula():
-    side = scattable.axis_bounds("sidescattable", det_radius_cm=1690.0,
-                                 det_halfheight_cm=1810.0, pmt_radius_cm=25.4)
-    cap = scattable.axis_bounds("topscattable", det_radius_cm=1690.0,
-                                det_halfheight_cm=1810.0, pmt_radius_cm=25.4)
-    # source axes are the PMT-enclosed volume
-    assert side[0] == pytest.approx((-1784.6, 1784.6))
-    assert side[1] == pytest.approx((0.0, 1664.6))
-    # the PMT axis follows the surface: z on the barrel, radius on a cap
-    assert side[2] == pytest.approx((-1784.6, 1784.6))
-    assert cap[2] == pytest.approx((0.0, 1664.6))
-    # angles carry the reference's 1.00001 padding
-    assert side[4] == pytest.approx((-1.00001, 1.00001))
-    assert side[3][1] == pytest.approx(np.pi * 1.00001)
 
 
 def test_scattable_ratio_is_6d_over_spread_4d():
@@ -370,14 +365,7 @@ def test_reference_grids_load():
     assert mom[0] > 0 and np.all(np.diff(mom) > 0) and reps.sum() > 0
 
     mu = binning.charge_mu_grid()
-    assert mu[0] == 0.1 and np.all(np.diff(mu) > 0)
-
-    # 1500 is the real final edge: makeChargePDFplot.C breaks its read loop on
-    # it before incrementing, so nqbins=480 but qbinEdg[480]=1500 is still used.
-    q = binning.charge_q_edges()
-    assert q[0] == 0.0 and q[-1] == 1500.0
-    assert len(q) - 1 == 480
-    assert np.all(np.diff(q) > 0)
+    # (the mu and q grids themselves: test_fitqun_reference_constants.test_charge_pdf_grids)
 
     # gen2d.cc opens files by mutbl.txt's literal tokens, so "1.0" must survive.
     labels = binning.charge_mu_labels()
