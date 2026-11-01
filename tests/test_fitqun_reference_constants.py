@@ -210,14 +210,20 @@ def test_attenuation_fit_recovers_a_known_length():
     n = 400_000
     L_true, a0_true = 7200.0, 0.93
     R = rng.uniform(0.0, attenlength.R_MAX_CM, n)
-    survives = rng.random(n) < a0_true * np.exp(-R / L_true)
-    dwall = rng.uniform(0.0, 1500.0, n)          # some sources inside the cut
+    dwall = rng.uniform(0.0, 1500.0, n)          # ~13% of sources inside the 200 cm cut
+    # Near-wall sources see a much shorter L, as wall-grazing light would; the cut is what keeps
+    # them out. Measured: with the cut L = 7236 cm (0.5% off); no cut 6052 cm (16% low); the cut
+    # inverted keeps only these, ~2000 cm. Either bug fails the 5% closure and the exact count.
+    near = dwall <= attenlength.DWALL_MIN_CM
+    L = np.where(near, 2000.0, L_true)
+    survives = rng.random(n) < a0_true * np.exp(-R / L)
 
     got = attenlength.measure(R, ~survives, dwall)
     assert abs(got.length_cm - L_true) / L_true < 0.05, got
     assert abs(got.a0 - a0_true) < 0.05, got
 
-    # The wall cut must actually remove photons, or it is not being applied.
-    _, h_all, _ = attenlength.histograms(R, ~survives, dwall)
-    assert h_all.sum() < n
+    # Exactly the sources beyond the cut are histogrammed (every R is inside [0, R_MAX)).
+    _, h_all, h_dir = attenlength.histograms(R, ~survives, dwall)
+    assert h_all.sum() == (~near).sum()
+    assert h_dir.sum() == (~near & survives).sum()
     assert attenlength.DWALL_MIN_CM == 200.0 and attenlength.R_MAX_CM == 5000.0
