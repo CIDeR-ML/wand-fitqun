@@ -135,6 +135,18 @@ def test_integral_tables_pick_the_right_angle_slice():
     # along a line of sight that stays inside that bin returns 1/dc.
     assert downstream == pytest.approx(1.0 / dc, rel=1e-9)
 
+    # Near field, where R0 >> s_max no longer hides the sign of s: a PMT on the track axis at
+    # R0 = s_max/2. Emission behind it (s < R0) looks forward, cos(theta(s)) = +1; emission past
+    # it (s > R0) looks back, -1. So only the first half of the track contributes:
+    #   I_0 = (R0/s_max)/dc = 0.5/dc,  I_1 = (1/(s_max dc)) sum_{s<R0} s ds = 12.5/dc
+    # (midpoint sums of s over 1 cm bins are exact). The far half would give I_1 = 37.5/dc, and
+    # the whole track (cos th = (R0 cos th0 + s)/R clips to +1 everywhere) I_0 = 1/dc.
+    I, _, _, _, _, _ = cprofile.integral_tables(
+        [cell], r0=np.array([0.5 * s_max]), costh0=np.array([-1.0, 1.0]))
+    assert I[0, 0, 1, 0] == pytest.approx(0.5 / dc, rel=1e-9)
+    assert I[1, 0, 1, 0] == pytest.approx(12.5 / dc, rel=1e-9)
+    assert I[0, 0, 0, 0] == pytest.approx(0.0, abs=1e-12)    # upstream sees none of it
+
 
 def test_cprofile_file_has_everything_fitqun_loads(tmp_path):
     """fiTQun_shared::LoadProfiles reads these objects by name; all must exist."""
@@ -631,6 +643,17 @@ def test_scattable_pmt_coordinate_follows_its_surface():
     np.testing.assert_allclose(t, [1000.0, 500.0])
     np.testing.assert_allclose(ct, [1.0, 1.0])
 
+    # ast = DeltaPhi(PMT, source) about the detector axis, phi = DeltaPhi(source direction,
+    # source->PMT), both PMT-minus-source in the reference's argument order (module docstring;
+    # scatTableLooper.C is not vendored). Hand values: source at azimuth 0, PMT at azimuth pi/4,
+    # so ast = +pi/4; source->PMT = (0, 500, 250) points at azimuth pi/2 and the source
+    # direction (-0.6, 0, 0.8) at azimuth pi, so phi = pi - pi/2 = +pi/2 and ct = 0.8.
+    zs, rs, t, ast, ct, phi = sd.coordinates(
+        np.array([[500.0, 0.0, 50.0]]), np.array([[-0.6, 0.0, 0.8]]),
+        np.array([[500.0, 500.0, 300.0]]), is_cap=np.array([False]))
+    np.testing.assert_allclose([zs[0], rs[0], t[0]], [50.0, 500.0, 300.0])
+    np.testing.assert_allclose([ast[0], ct[0], phi[0]], [np.pi / 4, 0.8, np.pi / 2], atol=1e-12)
+
 
 def test_scattable_driver_splits_direct_from_indirect():
     """One pass, split on the flag -- the reference never runs two productions."""
@@ -645,8 +668,10 @@ def test_scattable_driver_splits_direct_from_indirect():
     # fill() takes meters, as LUCiD propagation reports them.
     pmt_positions_m = np.array([[1690.0, 0.0, 0.0]]) / 100.0   # one barrel PMT
     pmt_dir_z = np.array([0.0])                          # barrel orientation
+    # Emission at (12, 0, 15) m = (1200, 0, 1500) cm: zs bin 3 of 4 over +-2000 cm and rs bin 1
+    # of 2 over 0..2000 cm. Left in metres it would land in zs bin 2, rs bin 0.
     chunk = {
-        "emission_pos": np.zeros((4, 3)),
+        "emission_pos": np.tile([12.0, 0.0, 15.0], (4, 1)),
         "emission_dir": np.tile([0.0, 0.0, 1.0], (4, 1)),
         "sensor_id": np.zeros(4, dtype=int),
         "detected": np.ones(4, dtype=bool),
@@ -657,6 +682,9 @@ def test_scattable_driver_splits_direct_from_indirect():
     side = tables["sidescattable"]
     assert side["scattered"].table.sum() == 3
     assert side["direct"].table.sum() == 1
+    for key in ("scattered", "direct"):
+        filled = np.argwhere(side[key].table)
+        assert len(filled) == 1 and tuple(filled[0][:2]) == (3, 1), (key, filled)
     # The direct partner collapses the two direction axes -- that is what makes
     # it the 4D table DivideUnnormalized4D expects.
     assert side["direct"].nbins[4:] == (1, 1)
@@ -671,7 +699,7 @@ def test_scattable_driver_splits_direct_from_indirect():
                 pmt_positions_m=pmt_positions_m, pmt_dir_z=pmt_dir_z)
 
 
-def test_cprofile_build_drops_cells_off_the_reference_grid(tmp_path):
+def test_cprofile_build_drops_cells_off_the_reference_grid(tmp_path, monkeypatch):
     """A cell from a superseded grid must not reach the momentum axis.
 
     ``write_cprofile`` takes the axis from the cells it is handed, so a stale
@@ -680,6 +708,11 @@ def test_cprofile_build_drops_cells_off_the_reference_grid(tmp_path):
     120-155 exist from when every PDG shared the muon list.
     """
     from lucid.production.fitqun.__main__ import main
+
+    # The filter is what is under test, not the 401 x 201 x 2200 integration (53 s on the
+    # production grid): three evaluation points per axis keep the build path and the axis.
+    monkeypatch.setattr(binning, "r0_points", lambda: np.array([0.0, 2500.0, 5000.0]))
+    monkeypatch.setattr(binning, "costh0_points", lambda: np.array([-1.0, 0.0, 1.0]))
 
     s_e, c_e = binning.s_edges(), binning.costh_edges()
     ds, dc = s_e[1] - s_e[0], c_e[1] - c_e[0]
@@ -696,6 +729,7 @@ def test_cprofile_build_drops_cells_off_the_reference_grid(tmp_path):
     assert main(["cprofile", "build", *paths, "--pdg", "211", "-o", str(out)]) == 0
     with uproot.open(out) as f:
         assert list(f["hI3d_0"].axis(2).edges()) == [156.0, 157.0]
+        assert list(f["hI3d_0"].axis(0).edges()) == [0.0, 2500.0, 5000.0, 7500.0]
 
     keep = tmp_path / "CProf_211_keep.root"
     assert main(["cprofile", "build", *paths, "--pdg", "211",
