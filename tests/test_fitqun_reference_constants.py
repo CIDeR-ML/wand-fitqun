@@ -127,8 +127,12 @@ def test_smax_quantile():
 
 
 def test_cprofile_momentum_grids_are_per_particle():
-    """Recovered from each CProf_<pdg>_fit_WCSim.root's gNphot. The starts are
-    the Cherenkov threshold, fiTQun_shared::pCherenkovThr with nphase=1.334."""
+    """Recovered from each CProf_<pdg>_fit_WCSim.root's gNphot.
+
+    The muon start is the Cherenkov threshold rounded up, m/sqrt(n^2-1) = 119.67 MeV/c at
+    fiTQun_shared::pCherenkovThr's nphase=1.334. The pion's shipped start, 156, is below its
+    158.08 MeV/c threshold at that index, and the electron grid starts at 1 (threshold 0.58), so
+    for those two the shipped files, not the threshold, are the reference."""
     expected = {11: (659, 1.0), 13: (551, 120.0), 211: (532, 156.0)}
     for pdg, (n, first) in expected.items():
         mom = binning.cprofile_momenta(pdg)
