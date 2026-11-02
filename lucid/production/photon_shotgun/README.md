@@ -74,7 +74,6 @@ notebooks can plot detection fraction vs position.
 Geometry
   --detector              PATH      Detector geometry JSON (required)
   --physics-config        PATH      Physics config JSON (required)
-  --detector-type         {Cylinder, Sphere, Box}
 
 Scale
   --n-cases               INT       Number of source configurations

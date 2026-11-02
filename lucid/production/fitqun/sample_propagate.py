@@ -20,7 +20,7 @@ uniformly drawn point -- the same distribution ``/gps/pos/type Volume`` gives.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator
 
 import numpy as np
 
@@ -46,7 +46,7 @@ def propagate_and_reduce(
         photonsim_root, shard_out, *, detector_config: str, physics_config: str,
         geometry, shell_radii_cm, n_photons: int = 20000, K: int = 12,
         seed: int = 0, batch: int = 8, atten_out=None, scat3d_out=None,
-        detector_type: str = "Cylinder", tts_sigma_ns: float = 1.0,
+        tts_sigma_ns: float = 1.0,
         wavelength_sampling: str = "cherenkov",
         shell_placement_cm=None) -> Path:
     """PhotonSim photons in, reduced shard out -- nothing in between.
@@ -85,7 +85,7 @@ def propagate_and_reduce(
 
     sim = setup_shotgun_simulator(
         detector_config, physics_config=physics_config, n_photons=n_photons,
-        output_mode="per_photon", K=K, detector_type=detector_type,
+        output_mode="per_photon", K=K,
         deposit_leg_bound=DEPOSIT_LEG_BOUND,
         tts_sigma_ns=tts_sigma_ns, wavelength_sampling=wavelength_sampling)
 

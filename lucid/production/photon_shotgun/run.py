@@ -52,8 +52,6 @@ def build_parser():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--detector', required=True, help='Detector geometry JSON')
     p.add_argument('--physics-config', required=True, help='Physics config JSON')
-    p.add_argument('--detector-type', default='Cylinder',
-                   choices=['Cylinder', 'Sphere', 'Box'])
     p.add_argument('--n-cases', type=int, required=True)
     p.add_argument('--n-photons', type=int, required=True,
                    help='Photons per case')
@@ -149,7 +147,7 @@ def main(argv=None):
         args.intensity = (1.0 / args.n_photons) if args.expected_value else 1.0
     print(f"[shotgun] per-photon intensity = {args.intensity:.3e}")
 
-    print(f"[shotgun] building simulator — detector={args.detector_type}, "
+    print(f"[shotgun] building simulator — detector={args.detector}, "
           f"n_photons={args.n_photons}, mode={args.output_mode}, K={args.K}")
     t0 = time.time()
     from lucid.production.run_job import DEPOSIT_LEG_BOUND
@@ -161,7 +159,6 @@ def main(argv=None):
         n_photons=args.n_photons,
         output_mode=args.output_mode,
         K=args.K,
-        detector_type=args.detector_type,
         window_ns=args.window_ns,
         bin_width_ns=args.bin_ns,
         tts_sigma_ns=args.tts_sigma_ns,
