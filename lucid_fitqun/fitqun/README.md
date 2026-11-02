@@ -59,27 +59,27 @@ filename by hand instead of through `names.py`.
 ## Bringing up a new detector
 
 ```bash
-source lucid/production/jobs/user_paths.sh
+source lucid_fitqun/jobs/user_paths.sh
 M=$FITQUN/tune_manifest_<DET>.json
 
 # 1. Samples. One electron bomb feeds the angular response and both scattering
 #    tables; muon/electron momentum grids feed the time PDF.
-python3 -m lucid.production.jobs.fitqun.generate_sample_jobs \
-        -c lucid/production/jobs/fitqun/configs/sample_<det>.json -s
-python3 tools/fitqun/make_timepdf_grid.py \
+python3 -m lucid_fitqun.jobs.generate_sample_jobs \
+        -c lucid_fitqun/jobs/configs/sample_<det>.json -s
+python3 tools/make_timepdf_grid.py \
         --chart $FITQUN/Utilities/timepdf/chart_13.txt --pdg 13 --scale 0.085 \
-        -o lucid/production/configs/GeV/tpdf
+        -o configs/tpdf
 
 # 2. Inputs, in dependency order. Each records itself in $M.
 #    cprofile: genhist -> integcprofile -> fitcprofile -> writecprof  (FOUR steps)
 #    charge PDF, angular response, 6D scattering table, then the time PDF.
 
 # 3. Check what you have before trying to reconstruct.
-python3 -m lucid.production.fitqun.report $M
+python3 -m lucid_fitqun.fitqun.report $M
 
 # 4. Install and reconstruct.
-bash tools/fitqun/run_reconstruction.sh <sample-dir> <n-events> <tag>
-python3 tools/fitqun/fq_resolution.py --fq <fq.root> --labl ... --step ... \
+bash tools/run_reconstruction.sh <sample-dir> <n-events> <tag>
+python3 tools/fq_resolution.py --fq <fq.root> --labl ... --step ... \
         --pdg 13 --require-fc
 ```
 
@@ -90,7 +90,7 @@ that performance is poor.
 
 ## Things that cost days to find
 
-Each of these fails silently or misleadingly. `tools/fitqun/reference/PATCHES.md`
+Each of these fails silently or misleadingly. `tools/reference/PATCHES.md`
 carries the same list for changes that live in the reference tree.
 
 **Sample and geometry**

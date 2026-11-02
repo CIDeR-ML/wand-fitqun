@@ -8,11 +8,11 @@ few tens of kB once reduced, so nothing but the reduction is kept.
 
 Merge and build the table once the jobs finish:
 
-    python -m lucid.production.fitqun cprofile build <out>/13/*/cell.npz \\
+    python -m lucid_fitqun.fitqun cprofile build <out>/13/*/cell.npz \\
         --pdg 13 -o CProf_13_WCSim.root
 
 The other four tuning stages do not fan out like this: the charge PDF runs in
-one process (``python -m lucid.production.fitqun chargepdf scan``), and the
+one process (``python -m lucid_fitqun.fitqun chargepdf scan``), and the
 angular, time and scattering tables are reductions over LUCiD simulation
 output produced by the normal production path.
 """
@@ -26,17 +26,16 @@ from pathlib import Path
 from typing import List, Optional
 
 SCRIPT_DIR = Path(__file__).parent
-LUCID_ROOT = SCRIPT_DIR.resolve().parents[3]
-if str(LUCID_ROOT) not in sys.path:
-    sys.path.insert(0, str(LUCID_ROOT))
+REPO_ROOT = SCRIPT_DIR.resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from lucid.production.cluster_common import htcondor  # noqa: E402, F401  registers adapter
 from lucid.production.cluster_common.cluster import get_adapter  # noqa: E402
 from lucid.production.cluster_common.user_paths import load_user_paths  # noqa: E402
-from lucid.production.fitqun import macros  # noqa: E402
+from lucid_fitqun.fitqun import macros  # noqa: E402
 
-JOBS_DIR = SCRIPT_DIR.parent
-USER_PATHS_DEFAULT = JOBS_DIR / "user_paths.sh"
+USER_PATHS_DEFAULT = SCRIPT_DIR / "user_paths.sh"
 
 
 def cell_command(*, cell_dir: Path, pdg: int, momentum: float) -> str:
@@ -54,7 +53,7 @@ def cell_command(*, cell_dir: Path, pdg: int, momentum: float) -> str:
     # PHOTONSIM_BIN is inlined by the HTCondor adapter when a dev checkout is
     # configured; fall back to the image's binary otherwise.
     run = f"${{PHOTONSIM_BIN:-/opt/PhotonSim/build/PhotonSim}} {macro}"
-    reduce_ = (f"python -m lucid.production.fitqun cprofile accumulate {root} "
+    reduce_ = (f"python -m lucid_fitqun.fitqun cprofile accumulate {root} "
                f"--pdg {pdg} --momentum {momentum:g} -o {cell}")
     return f"{run} && {reduce_} && rm -f {root}"
 
@@ -110,7 +109,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             # host may not have. A config naming its own grid never touches it.
             # The grid is per particle -- each starts at its own Cherenkov
             # threshold, so this has to be resolved inside the PDG loop.
-            from lucid.production.fitqun import binning
+            from lucid_fitqun.fitqun import binning
             momenta = [float(m) for m in binning.cprofile_momenta(int(pdg))]
         for momentum in momenta:
             cell_dir = out_base / str(pdg) / f"{momentum:g}MeV"

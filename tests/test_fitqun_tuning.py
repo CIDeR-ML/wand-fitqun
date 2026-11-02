@@ -10,7 +10,7 @@ form.
 import numpy as np
 import pytest
 
-from lucid.production.fitqun import angular, binning, cprofile, rootio, scattable, timepdf
+from lucid_fitqun.fitqun import angular, binning, cprofile, rootio, scattable, timepdf
 
 uproot = pytest.importorskip("uproot")
 
@@ -399,7 +399,7 @@ def test_profile_macro_never_disables_cherenkov():
     WCSim's has muon capture; a macro carrying WCSim's numbers deletes the
     muon's own light. Nothing generated here may switch Cerenkov off.
     """
-    from lucid.production.fitqun import macros
+    from lucid_fitqun.fitqun import macros
 
     for pdg in (11, 13, 211):
         text = macros.profile_macro(pdg=pdg, momentum_mev=1000.0,
@@ -416,7 +416,7 @@ def test_profile_macro_never_disables_cherenkov():
 
 
 def test_profile_macro_rejects_unknown_particle():
-    from lucid.production.fitqun import macros
+    from lucid_fitqun.fitqun import macros
     with pytest.raises(ValueError, match="no fiTQun hypothesis"):
         macros.profile_macro(pdg=2212, momentum_mev=1000.0,
                              output_path="out.root", n_events=10)
@@ -432,7 +432,7 @@ def test_charge_pdf_occupancy_follows_poisson_times_the_discriminator(tmp_path):
     instead, it would be inert and this would come out exactly 1 - exp(-mu) --
     which is the bug this pins against.
     """
-    from lucid.production.fitqun import chargepdf
+    from lucid_fitqun.fitqun import chargepdf
     from lucid.simulation.digitizer import _sample_spe_charge, resolve_model_config
 
     model = resolve_model_config("ski")
@@ -463,7 +463,7 @@ def test_charge_pdf_occupancy_follows_poisson_times_the_discriminator(tmp_path):
 def test_charge_pdf_batching_preserves_the_distribution():
     """Batching bounds memory. It redraws rather than replaying, so the check
     is that both give the same occupancy and mean, not the same draws."""
-    from lucid.production.fitqun import chargepdf
+    from lucid_fitqun.fitqun import chargepdf
 
     mu, n_pmt, n_events = 2.0, 500, 20
     model = chargepdf.resolve_model_config("ski")
@@ -484,7 +484,7 @@ def test_charge_pdf_batching_preserves_the_distribution():
 
 
 def test_charge_pdf_rejects_a_model_without_an_spe_spectrum():
-    from lucid.production.fitqun import chargepdf
+    from lucid_fitqun.fitqun import chargepdf
     with pytest.raises(ValueError, match="no physical SPE charge"):
         chargepdf.build(1.0, n_pmt=10, n_events=1, model="basic", seed=0)
 
@@ -496,7 +496,7 @@ def test_charge_pdf_filenames_match_the_reference_spelling(tmp_path):
     float gives "1".."9" and gen2d.cc then opens a missing file and
     dereferences the null TFile.
     """
-    from lucid.production.fitqun import chargepdf
+    from lucid_fitqun.fitqun import chargepdf
 
     for label in ("1.0", "0.1", "10", "1090"):
         p = chargepdf.write_mu_point(tmp_path, float(label), label=label,
@@ -510,35 +510,9 @@ def test_charge_pdf_filenames_match_the_reference_spelling(tmp_path):
 
 # --- cluster fan-out ----------------------------------------------------------
 
-def test_command_job_exports_env_for_the_whole_chain():
-    """`A=1 cmd1 && cmd2` scopes A to cmd1 in bash, which silently broke the
-    reduction step of the profile job: PhotonSim ran, then the `python -m
-    lucid...` that follows it came up without PYTHONPATH. The dev-checkout
-    overrides must be exported, not prefixed."""
-    from lucid.production.cluster_common.htcondor import HTCondorAdapter
-
-    adapter = HTCondorAdapter({
-        "LUCID_IMAGE_PATH": "/img.sif",
-        "LUCID_DEV_PATH": "/dev/LUCiD",
-        "PHOTONSIM_DEV_PATH": "/dev/PhotonSim",
-        "LOG_BASE_PATH": "/logs",
-    })
-    body = adapter.render_command_job(
-        command="first && second", cell_dir=__import__("pathlib").Path("/out/cell"),
-        job_name="j", log_stem="s", partition="")
-
-    args = next(l for l in body.splitlines() if l.startswith("arguments"))
-    assert "export PYTHONPATH=/dev/LUCiD" in args
-    assert "PHOTONSIM_BIN=/dev/PhotonSim/build/PhotonSim;" in args
-    assert args.index("export") < args.index("first && second")
-    # HTCondor's arguments is itself a quoted string; an embedded double quote
-    # would need doubling, so the command must not carry one.
-    assert '"' not in args[args.index("-c"):-1]
-
-
 def test_profile_cell_command_has_no_nested_quotes():
     import pathlib
-    from lucid.production.jobs.fitqun import generate_jobs
+    from lucid_fitqun.jobs import generate_jobs
 
     cmd = generate_jobs.cell_command(cell_dir=pathlib.Path("/out/cell"),
                                      pdg=13, momentum=1200.0)
@@ -548,7 +522,7 @@ def test_profile_cell_command_has_no_nested_quotes():
 
 
 def test_events_schedule_ladder():
-    from lucid.production.jobs.fitqun.generate_jobs import events_for
+    from lucid_fitqun.jobs.generate_jobs import events_for
     schedule = {"500": 400, "1500": 200, "1e9": 50}
     assert events_for(300, schedule) == 400
     assert events_for(500, schedule) == 400      # inclusive upper bound
@@ -560,7 +534,7 @@ def test_events_schedule_ladder():
 
 def test_sensor_axes_point_inward():
     """A sensor's axis must face into the water, or every cos(eta) flips sign."""
-    from lucid.production.fitqun import angular_driver as ad
+    from lucid_fitqun.fitqun import angular_driver as ad
 
     R, H = 1690.0, 1810.0
     pos = np.array([
@@ -578,7 +552,7 @@ def test_sensor_axes_point_inward():
 
 def test_angular_driver_keeps_only_direct_light():
     """The reference skips isct != 0; here that is the indirect flag."""
-    from lucid.production.fitqun import angular_driver as ad
+    from lucid_fitqun.fitqun import angular_driver as ad
 
     R, H = 1690.0, 1810.0
     # Positions go in as meters (LUCiD's convention); the cm grid args are
@@ -609,7 +583,7 @@ def test_angular_driver_keeps_only_direct_light():
 
 def test_scattable_delta_phi_wraps():
     """ast and phi are TVector3::DeltaPhi differences, wrapped to (-pi, pi]."""
-    from lucid.production.fitqun import scattable_driver as sd
+    from lucid_fitqun.fitqun import scattable_driver as sd
     a = np.array([3.0, -3.0, 0.5])
     b = np.array([-3.0, 3.0, 0.2])
     d = sd._delta_phi(a, b)
@@ -621,7 +595,7 @@ def test_scattable_delta_phi_wraps():
 
 def test_scattable_pmt_coordinate_follows_its_surface():
     """t is the PMT z on the barrel, its distance from the axis on a cap."""
-    from lucid.production.fitqun import scattable_driver as sd
+    from lucid_fitqun.fitqun import scattable_driver as sd
     src = np.zeros((2, 3))
     sdir = np.tile([0.0, 0.0, 1.0], (2, 1))
     pmt = np.array([[300.0, 400.0, 1000.0],     # barrel -> t = z = 1000
@@ -645,7 +619,7 @@ def test_scattable_pmt_coordinate_follows_its_surface():
 
 def test_scattable_driver_splits_direct_from_indirect():
     """One pass, split on the flag -- the reference never runs two productions."""
-    from lucid.production.fitqun import scattable_driver as sd
+    from lucid_fitqun.fitqun import scattable_driver as sd
 
     nb = {s: (4, 2, 2, 2, 2, 2) for s in scattable.SURFACES}
     bd = {s: ((-2000.0, 2000.0), (0.0, 2000.0), (-2000.0, 2000.0),
@@ -695,7 +669,7 @@ def test_cprofile_build_drops_cells_off_the_reference_grid(tmp_path, monkeypatch
     grid. pi+ is the live case: its grid starts at 156 MeV/c, but cells at
     120-155 exist from when every PDG shared the muon list.
     """
-    from lucid.production.fitqun.__main__ import main
+    from lucid_fitqun.fitqun.__main__ import main
 
     # The filter is what is under test, not the 401 x 201 x 2200 integration (53 s on the
     # production grid): three evaluation points per axis keep the build path and the axis.

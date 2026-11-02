@@ -5,7 +5,7 @@ os.environ.setdefault("JAX_PLATFORM_NAME", "cpu")
 import numpy as np
 import pytest
 
-from lucid.production.photon_shotgun.io import (
+from lucid_fitqun.photon_shotgun.io import (
     sparsify_waveform, densify_waveform,
     save_shotgun_waveform, load_shotgun_waveform,
     save_shotgun_per_photon, load_shotgun_per_photon,

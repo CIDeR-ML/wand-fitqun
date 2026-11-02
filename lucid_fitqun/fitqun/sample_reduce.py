@@ -11,7 +11,7 @@ shards only have to survive until the merge. The merged table is densified once
 at the end, which is where fiTQun's fixed-size array is actually needed.
 
 Equivalence with the dense path is not argued, it is tested: filling a
-:class:`~lucid.production.fitqun.scattable.ScatTable` directly and densifying
+:class:`~lucid_fitqun.fitqun.scattable.ScatTable` directly and densifying
 the sparse counts must give the same array, bin for bin.
 """
 from __future__ import annotations

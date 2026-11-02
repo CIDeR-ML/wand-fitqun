@@ -55,12 +55,13 @@ SHARD=${6:-0000}
 # the seeds in the campaign's job_*.mac before choosing.
 
 L=/afs/cern.ch/work/c/cjesus/DIFFSIM/LUCiD
+FQ=$(cd "$(dirname "$0")/.." && pwd)   # this LUCiD-fitqun checkout
 F=/afs/cern.ch/work/c/cjesus/DIFFSIM/fitqun
 E=/eos/project-n/neutrino-generators/cjesus/fitqun
 W=$E/work/$TAG
 mkdir -p "$W"
 
-export PYTHONPATH=$L
+export PYTHONPATH=$FQ:$L
 export FITQUN_ROOT=${FITQUN_ROOT_OVERRIDE:-$F/fiTQun}
 export LD_LIBRARY_PATH=$F/wcsim_build/lib:${LD_LIBRARY_PATH:-}
 need() { [ -s "$1" ] || { echo "MISSING $1 -- stopping"; exit 1; }; }
@@ -73,14 +74,14 @@ need "$SENSOR"; need "$LABL"; need "$STEP"
 TOT=$((SKIP + NEV))
 cd "$L"
 python - <<PY
-from lucid.production.fitqun import truth
+from lucid_fitqun.fitqun import truth
 t = truth.read_tracks("$LABL", "$STEP", max_events=$TOT)
 truth.write_text(t, "$W/truth.txt")
 print(f"truth: {len(t)} events (need {$TOT} to cover skip+n)")
 PY
 need "$W/truth.txt"
 
-python tools/fitqun/export_geometry.py config/sk_geometry.npz --sensor "$SENSOR" -o "$W/geom.txt"
+python "$FQ"/tools/export_geometry.py config/sk_geometry.npz --sensor "$SENSOR" -o "$W/geom.txt"
 need "$W/geom.txt"
 
 "$E"/bin/lucid_to_wcsim.new --geometry "$W/geom.txt" --sensor "$SENSOR" \
@@ -100,7 +101,7 @@ cd "$F/fiTQun"
 need "$W/qeeff.root"
 
 cd "$L"
-python tools/fitqun/qeeff_summary.py --fq "$W/qeeff.root" --pdg "$PDG" \
+python "$FQ"/tools/qeeff_summary.py --fq "$W/qeeff.root" --pdg "$PDG" \
     --manifest "$F/tune_manifest_SK_WAND.json" \
     --held-out "$SAMPLE events $SKIP-$((SKIP+NEV-1))" | tee "$W/qeeff.txt"
 echo QEEFF_DONE

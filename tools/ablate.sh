@@ -29,12 +29,13 @@ NAME=${4:?missing ablation name}
 shift 4
 
 L=/afs/cern.ch/work/c/cjesus/DIFFSIM/LUCiD
+FQ=$(cd "$(dirname "$0")/.." && pwd)   # this LUCiD-fitqun checkout
 F=/afs/cern.ch/work/c/cjesus/DIFFSIM/fitqun
 E=/eos/project-n/neutrino-generators/cjesus/fitqun
 W=$E/work/abl_$NAME
 rm -rf "$W"; mkdir -p "$W"
 
-export PYTHONPATH=$L FITQUN_ROOT=${FITQUN_ROOT_OVERRIDE:-$F/fiTQun}
+export PYTHONPATH=$FQ:$L FITQUN_ROOT=${FITQUN_ROOT_OVERRIDE:-$F/fiTQun}
 export LD_LIBRARY_PATH=$F/wcsim_build/lib:${LD_LIBRARY_PATH:-}
 need() { [ -s "$1" ] || { echo "MISSING $1 -- stopping"; exit 1; }; }
 
@@ -45,13 +46,13 @@ need "$SENSOR"; need "$LABL"; need "$STEP"
 
 cd "$L"
 python - <<PY
-from lucid.production.fitqun import truth
+from lucid_fitqun.fitqun import truth
 t = truth.read_tracks("$LABL", "$STEP", max_events=$NEV)
 truth.write_text(t, "$W/truth.txt")
 print(f"truth: {len(t)} events")
 PY
 need "$W/truth.txt"
-python tools/fitqun/export_geometry.py config/sk_geometry.npz --sensor "$SENSOR" -o "$W/geom.txt"
+python "$FQ"/tools/export_geometry.py config/sk_geometry.npz --sensor "$SENSOR" -o "$W/geom.txt"
 need "$W/geom.txt"
 "$E"/bin/lucid_to_wcsim.new --geometry "$W/geom.txt" --sensor "$SENSOR" \
     --gates "$LABL" --truth "$W/truth.txt" -o "$W/events.root" -n "$NEV"

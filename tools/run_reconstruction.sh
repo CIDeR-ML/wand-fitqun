@@ -19,12 +19,13 @@ SHARD=${4:-0000}
 # mu_metrics shard 0000 reuses the mu_fast2 scoring seed (782985707 2140288342).
 
 L=/afs/cern.ch/work/c/cjesus/DIFFSIM/LUCiD
+FQ=$(cd "$(dirname "$0")/.." && pwd)   # this LUCiD-fitqun checkout
 F=/afs/cern.ch/work/c/cjesus/DIFFSIM/fitqun
 E=/eos/project-n/neutrino-generators/cjesus/fitqun
 W=$E/work/$TAG
 mkdir -p "$W"
 
-export PYTHONPATH=$L
+export PYTHONPATH=$FQ:$L
 export FITQUN_ROOT=${FITQUN_ROOT_OVERRIDE:-$F/fiTQun}
 export LD_LIBRARY_PATH=$F/wcsim_build/lib:$LD_LIBRARY_PATH
 
@@ -37,7 +38,7 @@ need "$SENSOR"; need "$LABL"; need "$STEP"
 
 cd "$L"
 python - <<PY
-from lucid.production.fitqun import truth
+from lucid_fitqun.fitqun import truth
 t = truth.read_tracks("$LABL", "$STEP", max_events=$NEV)
 truth.write_text(t, "$W/truth.txt")
 print(f"truth: {len(t)} single-primary events")
@@ -47,7 +48,7 @@ need "$W/truth.txt"
 # The geometry MUST be exported in the sensor file's sensor_idx order; the
 # sk_geometry.npz order is a different permutation and mapping hits through it
 # attributes every hit to an unrelated PMT.
-python tools/fitqun/export_geometry.py config/sk_geometry.npz \
+python "$FQ"/tools/export_geometry.py config/sk_geometry.npz \
     --sensor "$SENSOR" -o "$W/geom.txt"
 need "$W/geom.txt"
 
@@ -69,6 +70,6 @@ cd "$L"
 # --require-fc: score only what fiTQun fits as fully contained, so arms with
 # different tunes are compared on the same footing rather than on whatever each
 # one happened to flag.
-python tools/fitqun/fq_resolution.py --fq "$W/fq.root" \
+python "$FQ"/tools/fq_resolution.py --fq "$W/fq.root" \
     --labl "$LABL" --step "$STEP" --pdg 13 --require-fc | tee "$W/resolution.txt"
 echo RECON_DONE

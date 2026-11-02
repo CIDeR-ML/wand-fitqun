@@ -15,10 +15,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lucid.production.fitqun import binning, cprofile, scattable, timepdf
+from lucid_fitqun.fitqun import binning, cprofile, scattable, timepdf
 
 # The one reference source vendored in-tree; the others are cited by line only.
-MAKEHIST = Path(__file__).resolve().parents[1] / "tools" / "fitqun" / "reference" / "makehistWCSim.cc"
+MAKEHIST = Path(__file__).resolve().parents[1] / "tools" / "reference" / "makehistWCSim.cc"
 
 
 def _makehist_source():
@@ -197,7 +197,7 @@ def test_pdg_masses():
     """Rest masses in MeV, PDG Review of Particle Physics (2022): e 0.51099895000(15),
     mu 105.6583755(23), pi+- 139.57039(18). Every truth momentum and every macro's kinetic
     energy goes through these; a unit slip (GeV) or a mu/pi swap moves all of them."""
-    from lucid.production.fitqun.particles import PDG_MASSES
+    from lucid_fitqun.fitqun.particles import PDG_MASSES
     assert PDG_MASSES[11] == pytest.approx(0.51099895, abs=2e-10)
     assert PDG_MASSES[13] == pytest.approx(105.6583755, abs=3e-7)
     assert PDG_MASSES[211] == pytest.approx(139.57039, abs=2e-5)
@@ -227,7 +227,7 @@ def test_names_reproduce_the_shipped_tune():
     generated name is wrong fiTQun falls back silently or segfaults rather than
     saying which file it wanted. The shipped WCTE tune supplies the ground truth.
     """
-    from lucid.production.fitqun import names
+    from lucid_fitqun.fitqun import names
 
     cfg, pmt = "nuPRISMBeamTest_16cShort_mPMT", "3inchPMTR12199_02"
     assert names.charge_pdf(pmt) == "cPDFpar_3inchPMTR12199_02.root"
@@ -263,7 +263,7 @@ def test_attenuation_fit_recovers_a_known_length():
     wall. Injecting the answer is the only way to know the estimator is unbiased,
     since the quantity has no closed form from the optical model.
     """
-    from lucid.production.fitqun import attenlength
+    from lucid_fitqun.fitqun import attenlength
 
     rng = np.random.default_rng(7)
     n = 400_000

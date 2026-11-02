@@ -1,7 +1,7 @@
 # fiTQun Cherenkov-profile scan
 
 Cluster fan-out (SLURM or HTCondor — see
-[`../../../../docs/guides/production/cluster-abstraction.md`](../../../../docs/guides/production/cluster-abstraction.md))
+LUCiD's `docs/guides/production/cluster-abstraction.md`)
 for the one fiTQun tuning table that needs a momentum scan of PhotonSim jobs.
 
 Each cell runs PhotonSim on a macro generated at submit time, reduces the
@@ -9,15 +9,15 @@ photon list to `cell.npz`, and deletes the ROOT file. The reduction is a few
 tens of kB against hundreds of MB of raw photons, so nothing else is kept.
 
 The other four tuning stages don't fan out this way: see
-[`../../fitqun/README.md`](../../fitqun/README.md).
+[`../fitqun/README.md`](../fitqun/README.md).
 
 ## Quick start
 
 ```bash
 # 1. Configure your paths (shared across all job stages)
-cp ../user_paths.lxplus.sh.template ../user_paths.sh   # on LXPLUS, or
-cp ../user_paths.s3df.sh.template   ../user_paths.sh   # on S3DF
-vim ../user_paths.sh
+cp $LUCID/lucid/production/jobs/user_paths.lxplus.sh.template user_paths.sh   # on LXPLUS, or
+cp $LUCID/lucid/production/jobs/user_paths.s3df.sh.template   user_paths.sh   # on S3DF
+vim user_paths.sh
 
 # 2. Smoke test: one cell, 20 events
 python3 generate_jobs.py -c configs/water_mu_test.json -t -s
@@ -28,7 +28,7 @@ python3 generate_jobs.py -c configs/water_el.json -s
 python3 generate_jobs.py -c configs/water_pi.json -s
 
 # 4. Build the table once the cells are in
-python -m lucid.production.fitqun cprofile build \
+python -m lucid_fitqun.fitqun cprofile build \
     $OUTPUT_BASE_PATH/fitqun_cprofile/13/*/cell.npz \
     --pdg 13 -o CProf_13_WCSim.root
 ```

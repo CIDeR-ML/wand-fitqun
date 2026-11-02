@@ -9,7 +9,7 @@ Example
 10,000 isotropic Cherenkov shots of 100k photons each from random positions in
 SK, waveform mode::
 
-    python -m lucid.production.photon_shotgun.run \\
+    python -m lucid_fitqun.photon_shotgun.run \\
         --detector config/SK_geom_config.json \\
         --physics-config config/SK_physics_config.json \\
         --n-cases 10000 --n-photons 100000 \\
@@ -28,11 +28,11 @@ import numpy as np
 
 from lucid.simulation.shotgun import setup_shotgun_simulator
 from lucid.sources.shotgun_source import shotgun_source, stack_shotgun_sources
-from lucid.production.photon_shotgun.utils import (
+from lucid_fitqun.photon_shotgun.utils import (
     read_detector_bounds,
     sample_positions_uniform, sample_directions_isotropic,
 )
-from lucid.production.photon_shotgun.io import (
+from lucid_fitqun.photon_shotgun.io import (
     StreamingWaveformWriter, StreamingPerPhotonWriter,
 )
 

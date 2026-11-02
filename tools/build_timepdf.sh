@@ -18,13 +18,14 @@ GRID=${2:?missing grid root}
 W=${3:?missing work dir}
 
 L=/afs/cern.ch/work/c/cjesus/DIFFSIM/LUCiD
+FQ=$(cd "$(dirname "$0")/.." && pwd)   # this LUCiD-fitqun checkout
 F=/afs/cern.ch/work/c/cjesus/DIFFSIM/fitqun
 E=/eos/project-n/neutrino-generators/cjesus/fitqun
 NWTR=$(grep -oP "fiTQun.WaterRefractiveIndex\\s*=\\s*\\K[0-9.]+" "$F/fitqun_SK_WAND.parameters.dat")
 [ -n "$NWTR" ] || { echo "tune does not set fiTQun.WaterRefractiveIndex"; exit 1; }
 echo "using nwtr=$NWTR (from the tune, matching the fitter)"
 
-export PYTHONPATH=$L FITQUN_ROOT=$F/fiTQun
+export PYTHONPATH=$FQ:$L FITQUN_ROOT=$F/fiTQun
 export LD_LIBRARY_PATH=$F/wcsim_build/lib:${LD_LIBRARY_PATH:-}
 mkdir -p "$W"; cd "$L"
 
@@ -58,11 +59,11 @@ for D in "$GRID"/*${PDG}_p*/*/*/config_*; do
         LABL="$D/labl/wc_labl_$IDX.h5"; STEP="$D/step/wc_step_$IDX.h5"
         [ -s "$LABL" ] && [ -s "$STEP" ] || { echo "SKIP $TAG shard $IDX: no labl/step"; continue; }
         python - <<PY
-from lucid.production.fitqun import truth
+from lucid_fitqun.fitqun import truth
 t = truth.read_tracks("$LABL", "$STEP")
 truth.write_text(t, "$O/truth_$IDX.txt")
 PY
-        python tools/fitqun/export_geometry.py config/sk_geometry.npz \
+        python "$FQ"/tools/export_geometry.py config/sk_geometry.npz \
             --sensor "$SENSOR" -o "$O/geom_$IDX.txt"
         "$E"/bin/lucid_to_wcsim.new --geometry "$O/geom_$IDX.txt" --sensor "$SENSOR" \
             --truth "$O/truth_$IDX.txt" -o "$O/events_$IDX.root"
@@ -119,7 +120,7 @@ root -l -b -q "$F/timepdf_work/fittpdf.cc($PDG,0,1)"
 # A size check cannot tell a good parameterisation from one full of NaN. fittpdf
 # exits 0 either way, and an all-NaN gtcmnpar/gtcsgpar gives -lnL=nan on every
 # event -- which looks like a slow fit, not a broken tune. Refuse to install it.
-root -l -b -q "$L/tools/fitqun/check_tpdfpar.C(\"${PDG}_tpdfpar.root\")" | tee tpdfpar_check.log
+root -l -b -q "$FQ/tools/check_tpdfpar.C(\"${PDG}_tpdfpar.root\")" | tee tpdfpar_check.log
 grep -q "TPDFPAR_OK" tpdfpar_check.log || { echo "tpdfpar failed validation -- NOT installing"; exit 1; }
 cp "${PDG}_tpdfpar.root" "$F/fiTQun/const/${PDG}_tpdfpar_SK_WAND_PMT20inch.root"
 echo TIMEPDF_DONE

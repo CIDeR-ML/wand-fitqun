@@ -1,6 +1,6 @@
 """Command line for the fiTQun tuning-input generators.
 
-    python -m lucid.production.fitqun <stage> <action> [options]
+    python -m lucid_fitqun.fitqun <stage> <action> [options]
 
 Stages that fan out over a grid (``cprofile``) split into a per-cell
 ``accumulate`` that a batch job runs and a ``build`` that merges the cells into
@@ -148,7 +148,7 @@ def _cmd_chargepdf_scan(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="python -m lucid.production.fitqun",
+    p = argparse.ArgumentParser(prog="python -m lucid_fitqun.fitqun",
                                 description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     stages = p.add_subparsers(dest="stage", required=True)

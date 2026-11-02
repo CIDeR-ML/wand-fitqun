@@ -41,7 +41,7 @@ Every default is overridable via CLI flags (see `--help`).
 
 ```bash
 # 1k random positions × 100k photons in SK, waveform mode
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/SK_geom_config.json \
     --physics-config config/SK_physics_config.json \
     --n-cases 1000 --n-photons 100000 \
@@ -54,7 +54,7 @@ End-to-end on an RTX 4090: ~90 s, ~11 MB on disk for the above.
 
 ```bash
 # Same geometry, per-photon mode (saves raw hit list)
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/SK_geom_config.json \
     --physics-config config/SK_physics_config.json \
     --n-cases 1000 --n-photons 100000 \
@@ -164,7 +164,7 @@ if you only need peak pulse shapes.
 ### Example — recommended 10k × 500k expected-density production
 
 ```bash
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/SK_geom_config.json --physics-config config/SK_physics_config.json \
     --n-cases 10000 --n-photons 500000 \
     --expected-value --wavelength-sampling cherenkov_qe \
@@ -180,7 +180,7 @@ python -m lucid.production.photon_shotgun.run \
 **Uniform-position + isotropic-direction beam survey (default pattern)**
 
 ```bash
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/HK_geom_config.json --physics-config config/HK_physics_config.json \
     --n-cases 10000 --n-photons 500000 \
     --output-mode waveform --chunk 10 \
@@ -190,7 +190,7 @@ python -m lucid.production.photon_shotgun.run \
 **Fixed-beam study — all cases share an origin and a direction**
 
 ```bash
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/SK_geom_config.json --physics-config config/SK_physics_config.json \
     --n-cases 1000 --n-photons 1000000 \
     --position-mode center --origin 0 0 0 \
@@ -203,7 +203,7 @@ python -m lucid.production.photon_shotgun.run \
 **IWCD / WCTE (small detector)**
 
 ```bash
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/IWCD_geom_config.json --physics-config config/IWCD_physics_config.json \
     --n-cases 1000 --n-photons 100000 \
     --K 10 \
@@ -218,7 +218,7 @@ python -m lucid.production.photon_shotgun.run \
 ## Loading outputs
 
 ```python
-from lucid.production.photon_shotgun.io import load_shotgun_waveform, load_shotgun_per_photon
+from lucid_fitqun.photon_shotgun.io import load_shotgun_waveform, load_shotgun_per_photon
 
 # Waveform mode
 out = load_shotgun_waveform('runs/shotgun_SK_1k_waveform.h5')
@@ -248,14 +248,14 @@ separate GPUs, hosts, or just sequentially if that's what you have.
 
 ```bash
 # On machine 0:
-python -m lucid.production.photon_shotgun.run \
+python -m lucid_fitqun.photon_shotgun.run \
     --detector config/SK_geom_config.json --physics-config config/SK_physics_config.json \
     --n-cases 2500 --n-photons 100000 \
     --seed 1 \
     -o runs/shard_0.h5
 
 # On machine 1:
-python -m lucid.production.photon_shotgun.run ... --seed 2 -o runs/shard_1.h5
+python -m lucid_fitqun.photon_shotgun.run ... --seed 2 -o runs/shard_1.h5
 # ...on machine 2, 3:  seeds 3, 4
 ```
 
@@ -264,7 +264,7 @@ a single GPU that they'd contend for)**
 
 ```bash
 for i in 0 1 2 3; do
-    python -m lucid.production.photon_shotgun.run \
+    python -m lucid_fitqun.photon_shotgun.run \
         --detector config/SK_geom_config.json --physics-config config/SK_physics_config.json \
         --n-cases 2500 --n-photons 100000 \
         --seed $((1 + i)) \
@@ -276,7 +276,7 @@ wait
 **Merge into one HDF5**
 
 ```python
-from lucid.production.photon_shotgun.io import merge_waveform_shards
+from lucid_fitqun.photon_shotgun.io import merge_waveform_shards
 
 merge_waveform_shards(
     [f'runs/shard_{i}.h5' for i in range(4)],
@@ -323,7 +323,7 @@ Three starter notebooks live in `notebooks/`:
 ## Files
 
 ```
-lucid/production/photon_shotgun/
+lucid_fitqun/photon_shotgun/
 ├── __init__.py     # re-exports
 ├── run.py          # CLI entry point (python -m ...)
 ├── io.py           # COO sparsify/densify, save/load, streaming writers,

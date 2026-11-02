@@ -2,7 +2,7 @@
 
 - ``truth``: momentum from kinetic energy (closed form p^2 = T^2 + 2Tm), the primary is
   ``track_idx == 0``, which events are skipped, and the m -> cm text export.
-- ``tools/fitqun/fq_residuals.py``: the longitudinal/transverse vertex split it quotes for fiTQun,
+- ``tools/fq_residuals.py``: the longitudinal/transverse vertex split it quotes for fiTQun,
   on a hand-built fiTQun tree.
 - ``isotropic_sample.translate_uniform`` / ``translate_shell``: uniform in VOLUME (r^2 in a
   cylinder, r^3 in a shell), one vertex per event, the shell radius converted cm -> m.
@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lucid.production.fitqun import cprofile, isotropic_sample, truth
+from lucid_fitqun.fitqun import cprofile, isotropic_sample, truth
 
 uproot = pytest.importorskip("uproot")
 h5py = pytest.importorskip("h5py")
@@ -118,10 +118,10 @@ def test_write_text_converts_metres_to_cm(tmp_path):
                                [150.0, -200.0, 25.0, 3.0, 0.0, 0.6, 0.8, 596.25])
 
 
-# --- tools/fitqun/fq_residuals.py --------------------------------------------------------
+# --- tools/fq_residuals.py --------------------------------------------------------
 
 def _load_tool(name):
-    path = REPO / "tools" / "fitqun" / f"{name}.py"
+    path = REPO / "tools" / f"{name}.py"
     spec = importlib.util.spec_from_file_location(f"_tools_fitqun_{name}", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

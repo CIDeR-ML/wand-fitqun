@@ -132,7 +132,7 @@ def translate_shell(origins: np.ndarray, rng, *, pmt_pos_m: np.ndarray,
     fill in with more events.
 
     Sensors whose shell would leave the detector are dropped exactly as
-    :func:`lucid.production.fitqun.angular.measure` drops them, so both ends of
+    :func:`lucid_fitqun.fitqun.angular.measure` drops them, so both ends of
     the chain agree on which shells are usable.
     """
     pmt_pos_m = np.asarray(pmt_pos_m, dtype=np.float64)

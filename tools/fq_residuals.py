@@ -14,10 +14,10 @@ import argparse, sys
 from pathlib import Path
 import numpy as np
 
-LUCID_ROOT = Path(__file__).resolve().parents[2]
-if str(LUCID_ROOT) not in sys.path:
-    sys.path.insert(0, str(LUCID_ROOT))
-from lucid.production.fitqun import truth as truth_mod  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from lucid_fitqun.fitqun import truth as truth_mod  # noqa: E402
 
 PID_INDEX = {22: 0, 11: 1, 13: 2, 211: 3, 321: 4, 2212: 5, 48: 6}
 M_TO_CM = 100.0

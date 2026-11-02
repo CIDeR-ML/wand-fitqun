@@ -89,7 +89,7 @@ called once per type with a different file each time, so it finds nothing in tha
 output and segfaults on the first unguarded dereference -- indistinguishable from
 the symptom of an empty `cPDFpar`.
 
-`tools/fitqun/cpdfpar_for_type.C` copies one type out under the loader's names.
+`tools/cpdfpar_for_type.C` copies one type out under the loader's names.
 It also copies the range index `nRang` *inclusive*, because the loader's loop is
 `for (iRang = 0; iRang <= nRang; ...)`.
 
@@ -274,7 +274,7 @@ Two fixes, both mirroring what `makehistWCSim.cc` already does:
   `QEEff` is wrong rather than merely noisy.
 
 This depends on the converter writing the trigger time into the header `Date`
-field; `tools/fitqun/lucid_to_wcsim.cc` wrote `0` there until it was fixed.
+field; `tools/lucid_to_wcsim.cc` wrote `0` there until it was fixed.
 
 ## `fiTQun/fiTQun.cc` — per-PMT prediction dump
 
@@ -286,7 +286,7 @@ now writes one row per PMT per event:
     event icab flgHit flgMask R_cm costheta0 mu muscat chrg tHit tau tres qeeff
 
 `mu` (direct) and `muscat` (indirect) stay separate so a run can be split by
-which term dominates without re-running. This is what `tools/fitqun/ablate.sh`
+which term dominates without re-running. This is what `tools/ablate.sh`
 and `ablation_report.py` consume to test the closure identity `E[q] = mu`
 differentially -- **the committed harness does not function without this patch.**
 
@@ -300,7 +300,7 @@ on near-zero-`mu` PMTs.
 indefinitely.** They live as patches in `patches/`, generated against pinned
 upstream commits, with `patches/apply.sh` to re-apply them to a fresh checkout:
 
-    tools/fitqun/reference/patches/apply.sh /path/to/fitqun-tree
+    tools/reference/patches/apply.sh /path/to/fitqun-tree
 
 Patches rather than whole-file copies, for three reasons: the diff *is* the
 documentation of what we changed and why; a copy silently reverts an upstream

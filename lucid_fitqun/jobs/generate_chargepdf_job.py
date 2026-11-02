@@ -23,11 +23,10 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-JOBS_DIR = SCRIPT_DIR.parent
-USER_PATHS_DEFAULT = JOBS_DIR / "user_paths.sh"
-LUCID_ROOT = SCRIPT_DIR.resolve().parents[3]
-if str(LUCID_ROOT) not in sys.path:
-    sys.path.insert(0, str(LUCID_ROOT))
+USER_PATHS_DEFAULT = SCRIPT_DIR / "user_paths.sh"
+REPO_ROOT = SCRIPT_DIR.resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from lucid.production.cluster_common import htcondor  # noqa: E402, F401  registers adapter
 from lucid.production.cluster_common import nersc  # noqa: E402, F401  registers adapter
@@ -38,7 +37,7 @@ from lucid.production.cluster_common.user_paths import load_user_paths  # noqa: 
 def scan_command(*, out_dir: Path, n_pmt: int, n_events: int, model: str,
                  seed: int) -> str:
     """The one-liner the job runs inside the container."""
-    return (f"python -m lucid.production.fitqun chargepdf scan "
+    return (f"python -m lucid_fitqun.fitqun chargepdf scan "
             f"-o {out_dir} --n-pmt {n_pmt} --n-events {n_events} "
             f"--model {model} --seed {seed}")
 

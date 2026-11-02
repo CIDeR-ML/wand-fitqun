@@ -3,7 +3,7 @@
 //
 // TScatTable is a user-defined class with its own dictionary, so the file must
 // be written by a program that has that dictionary — which is why this step is
-// here rather than in lucid/production/fitqun/scattable.py. Run it from the
+// here rather than in lucid_fitqun/fitqun/scattable.py. Run it from the
 // fiTQun Utilities checkout, where TScatTable.cc and its LinkDef already live:
 //
 //   ./build_scattable_converter.sh <Utilities/scattable> in.h5 out.root
@@ -28,7 +28,7 @@
 
 namespace {
 
-// Read one group written by lucid.production.fitqun.scattable.write_hdf5.
+// Read one group written by lucid_fitqun.fitqun.scattable.write_hdf5.
 bool ReadGroup(hid_t file, const std::string& surface,
                std::vector<int>& nbins, std::vector<double>& bounds,
                std::vector<double>& flat) {

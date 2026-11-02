@@ -21,7 +21,7 @@ class element for element.
 class with its own dictionary, not a stock ROOT container; a file holding one
 carries the class's streamer info, which uproot cannot synthesise. So the table
 is written to HDF5 here and converted by
-``tools/fitqun/build_scattable_converter.sh``, which builds the dictionary from
+``tools/build_scattable_converter.sh``, which builds the dictionary from
 the ``TScatTable`` sources in the fiTQun Utilities checkout and emits
 ``fiTQun_scattablesF_<config>.root``. The LUCiD container already carries ROOT
 and HDF5, so the conversion runs there -- no separate fiTQun build needed.
@@ -169,7 +169,7 @@ def surface_for(pmt_dir_z: np.ndarray) -> np.ndarray:
 
 
 def write_hdf5(path, tables: dict, metadata: Optional[dict] = None) -> Path:
-    """Write ``{surface: ScatTable}`` for ``tools/fitqun/h5_to_scattable.C``."""
+    """Write ``{surface: ScatTable}`` for ``tools/h5_to_scattable.C``."""
     import h5py
 
     path = Path(path)

@@ -23,9 +23,9 @@ import math
 import sys
 from pathlib import Path
 
-LUCID_ROOT = Path(__file__).resolve().parents[2]
-if str(LUCID_ROOT) not in sys.path:
-    sys.path.insert(0, str(LUCID_ROOT))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 from lucid.pdg import PDG_MASS_MEV  # noqa: E402
 
 PARTICLE = {13: "mu-", 11: "e-", 211: "pi+"}

@@ -82,7 +82,7 @@ def measure(emission_pos: np.ndarray, sensor_pos: np.ndarray, sensor_dir: np.nda
     method. ``fit_cos.C`` fits a single hardcoded ``angRespAll_100``, so the
     100 cm shell in particular has to be populated; that is what requires the
     sources to fill the volume out to the sensor faces (see
-    :func:`lucid.production.fitqun.isotropic_sample.translate_uniform`).
+    :func:`lucid_fitqun.fitqun.isotropic_sample.translate_uniform`).
 
     Entries are per photon with unit weight, as the reference fills them
     (``totalPe`` is hardcoded to 1 there). Photons from one event that land on

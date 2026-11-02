@@ -36,17 +36,17 @@ def _code(src):
 
 HEADER_IMPORTS = """\
 import sys
-sys.path.append('../../../../')  # notebooks/ → photon_shotgun/ → production/ → lucid/ → repo root
+sys.path.append('../../../')  # notebooks/ → photon_shotgun/ → lucid_fitqun/ → repo root
 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
-from lucid.production.photon_shotgun.io import (
+from lucid_fitqun.photon_shotgun.io import (
     load_shotgun_waveform, load_shotgun_per_photon,
 )
-from lucid.production.photon_shotgun.viz import (
+from lucid_fitqun.photon_shotgun.viz import (
     scatter_sensors_3d, plot_hist_lin_log,
 )
 from lucid.geometry import generate_detector
@@ -59,7 +59,7 @@ def _resolve_geom(meta):
     geom_path = meta.get('detector_config', '')
     if isinstance(geom_path, bytes):
         geom_path = geom_path.decode()
-    for candidate in ['../../../../' + geom_path, geom_path]:
+    for candidate in ['../../../' + geom_path, geom_path]:
         if os.path.exists(candidate):
             return candidate
     return geom_path
@@ -84,7 +84,7 @@ Load a shotgun waveform HDF5, pick a case, and show:
 """),
     _code(HEADER_IMPORTS),
     _code("""\
-WAVE_PATH = '../../../../runs/shotgun_SK_1k_waveform.h5'
+WAVE_PATH = '../../../runs/shotgun_SK_1k_waveform.h5'
 CASE = 0
 
 out = load_shotgun_waveform(WAVE_PATH)
@@ -225,7 +225,7 @@ Requires a per-photon run (``--output-mode per_photon``):
 """),
     _code(HEADER_IMPORTS),
     _code("""\
-PP_PATH = '../../../../runs/shotgun_SK_1k_per_photon.h5'
+PP_PATH = '../../../runs/shotgun_SK_1k_per_photon.h5'
 
 out = load_shotgun_per_photon(PP_PATH)
 meta = dict(out['meta'])
@@ -310,7 +310,7 @@ Requires a run saved with ``--save-source``.
 """),
     _code(HEADER_IMPORTS),
     _code("""\
-PATH = '../../../../runs/shotgun_SK_1k_waveform.h5'
+PATH = '../../../runs/shotgun_SK_1k_waveform.h5'
 MODE = 'waveform'   # or 'per_photon'
 
 if MODE == 'waveform':

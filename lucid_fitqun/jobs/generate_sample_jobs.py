@@ -30,7 +30,7 @@ once, failed outright: EOS returned ``errno 121`` mid-write for ~4% of a
 Run it like its sibling:
 
     ./generate_sample_jobs.py -c configs/sample_e3mev_test.json -t -s
-    python -m lucid.production.fitqun sample build <out>/job_*/shard.npz -o <out>
+    python -m lucid_fitqun.fitqun sample build <out>/job_*/shard.npz -o <out>
 """
 from __future__ import annotations
 
@@ -41,11 +41,10 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-JOBS_DIR = SCRIPT_DIR.parent
-USER_PATHS_DEFAULT = JOBS_DIR / "user_paths.sh"
-LUCID_ROOT = SCRIPT_DIR.resolve().parents[3]
-if str(LUCID_ROOT) not in sys.path:
-    sys.path.insert(0, str(LUCID_ROOT))
+USER_PATHS_DEFAULT = SCRIPT_DIR / "user_paths.sh"
+REPO_ROOT = SCRIPT_DIR.resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from lucid.production.cluster_common import htcondor  # noqa: E402, F401  registers adapter
 from lucid.production.cluster_common import nersc  # noqa: E402, F401  registers adapter
@@ -70,7 +69,7 @@ def job_command(*, job_dir: Path, geometry: Path, detector: Path, physics: Path,
     # PHOTONSIM_BIN is inlined by the HTCondor adapter when a dev checkout is
     # configured; fall back to the image's binary otherwise.
     run = f"${{PHOTONSIM_BIN:-/opt/PhotonSim/build/PhotonSim}} {macro}"
-    reduce_ = (f"python -m lucid.production.fitqun sample run {root} "
+    reduce_ = (f"python -m lucid_fitqun.fitqun sample run {root} "
                f"--geometry {geometry} --detector-config {detector} "
                f"--physics-config {physics} --n-photons {n_photons} "
                f"--shells {shell_args} --seed {seed} -o {shard}"
@@ -111,7 +110,7 @@ def main(argv=None) -> int:
     n_jobs = int(args.n_jobs or cfg["n_jobs"])
     shells = cfg.get("shell_radii_cm")
     if shells is None:
-        from lucid.production.fitqun import binning
+        from lucid_fitqun.fitqun import binning
         shells = list(binning.ANGRESP_SHELL_RADII_CM)
     geometry = Path(cfg["geometry"])
     detector = Path(cfg["detector_config"])
@@ -130,7 +129,7 @@ def main(argv=None) -> int:
 
         # Deferred: the macro builder needs only the numpy-free half of the
         # package, so a bare submit host is still enough.
-        from lucid.production.fitqun import isotropic_sample as iso
+        from lucid_fitqun.fitqun import isotropic_sample as iso
         (job_dir / "photonsim.mac").write_text(iso.photonsim_macro(
             output_path=job_dir / "photonsim.root",
             n_events=int(cfg["events_per_job"]),

@@ -1,8 +1,8 @@
 """Drive the angular-response measurement over the 3 MeV electron sample.
 
-The reduction lives in :mod:`lucid.production.fitqun.angular`; this is the part
+The reduction lives in :mod:`lucid_fitqun.fitqun.angular`; this is the part
 that produces its inputs. It takes the shared isotropic sample (see
-:mod:`lucid.production.fitqun.isotropic_sample`), propagates it through LUCiD,
+:mod:`lucid_fitqun.fitqun.isotropic_sample`), propagates it through LUCiD,
 and hands the reduction the four per-photon quantities it needs: the emission
 point, the sensor that was hit, that sensor's position and its inward axis.
 
@@ -109,7 +109,7 @@ def run(shotgun_files: Iterable[str], sensor_positions_m: np.ndarray, *,
 
     ``sensor_positions_m`` is in meters, as LUCiD reports it.
     """
-    from lucid.production.photon_shotgun.io import load_shotgun_per_photon
+    from lucid_fitqun.photon_shotgun.io import load_shotgun_per_photon
 
     def _chunks():
         for path in shotgun_files:

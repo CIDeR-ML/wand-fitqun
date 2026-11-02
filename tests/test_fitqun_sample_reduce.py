@@ -8,8 +8,8 @@ axis rather than clamping it.
 import numpy as np
 import pytest
 
-from lucid.production.fitqun import scattable
-from lucid.production.fitqun.sample_reduce import SampleShard, SparseCounts
+from lucid_fitqun.fitqun import scattable
+from lucid_fitqun.fitqun.sample_reduce import SampleShard, SparseCounts
 
 
 NB = (7, 5, 5, 4, 3, 3)
@@ -98,7 +98,7 @@ def test_merge_shards_is_the_dense_sum_of_every_shard(tmp_path):
     """``merge_shards`` (the production merge, through ``DenseAccumulator``) must equal filling
     one dense table with every shard's photons, bin for bin, and sum the angular histograms and
     the photon counters."""
-    from lucid.production.fitqun.sample_reduce import merge_shards
+    from lucid_fitqun.fitqun.sample_reduce import merge_shards
 
     rng = np.random.default_rng(3)
     nb_dir = NB[:4] + (1, 1)

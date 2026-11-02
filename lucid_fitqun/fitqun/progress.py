@@ -1,11 +1,11 @@
 """One progress line, emitted the same way by every long stage.
 
-``tools/fitqun/eta.py`` turns these into a measured percentage and ETA. The line
+``tools/eta.py`` turns these into a measured percentage and ETA. The line
 carries its own total *and its own clock*, so a rate can be computed from two
 lines alone -- no dependence on file mtime, which AFS and re-created logs make
 unreliable -- and it is flushed so the number is current rather than whatever a
 pipe happens to have released. The reference macros emit the identical line (see
-``tools/fitqun/reference/PATCHES.md``), so one watcher covers C++ and Python.
+``tools/reference/PATCHES.md``), so one watcher covers C++ and Python.
 """
 from __future__ import annotations
 

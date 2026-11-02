@@ -91,8 +91,8 @@ def main(argv=None) -> None:
 
     if a.manifest:
         import sys
-        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-        from lucid.production.fitqun import manifest as M
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from lucid_fitqun.fitqun import manifest as M
 
         m = M.load(a.manifest)
         M.record(a.manifest, detector=m.detector, config=m.config, pmt_type=m.pmt_type,

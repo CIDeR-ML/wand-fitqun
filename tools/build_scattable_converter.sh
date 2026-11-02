@@ -4,7 +4,7 @@
 #
 # TScatTableF is fiTQun's own class, so the ROOT file must be written by a
 # program holding its dictionary — which is why this step is here rather than
-# in lucid/production/fitqun/scattable.py. Everything needed is in the LUCiD
+# in lucid_fitqun/fitqun/scattable.py. Everything needed is in the LUCiD
 # container (ROOT 6.30, HDF5) plus the TScatTable sources from the fiTQun
 # Utilities checkout.
 #
@@ -12,7 +12,7 @@
 #
 # Verified round-trip: element order and all six axis definitions survive, and
 # ROOT's own GetIndex() agrees with the dimension-0-fastest convention
-# lucid.production.fitqun.scattable writes.
+# lucid_fitqun.fitqun.scattable writes.
 set -euo pipefail
 
 SRC=${1:?usage: $0 <Utilities/scattable dir> <in.h5> <out.root>}

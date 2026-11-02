@@ -93,7 +93,7 @@ class Manifest:
 def _git_commit() -> str:
     try:
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"],
-                              cwd=Path(__file__).resolve().parents[3],
+                              cwd=Path(__file__).resolve().parents[2],
                               capture_output=True, text=True, timeout=10).stdout.strip()
     except Exception:
         return ""

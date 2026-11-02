@@ -1,6 +1,6 @@
 """Drive the indirect-light tables over the 3 MeV electron sample.
 
-The table class and its ratio live in :mod:`lucid.production.fitqun.scattable`;
+The table class and its ratio live in :mod:`lucid_fitqun.fitqun.scattable`;
 this fills them from propagated photons. One MC pass produces both halves, split
 on the per-photon scatter flag exactly as the reference splits on ``isct``:
 
@@ -127,5 +127,5 @@ def finalise(tables: dict) -> dict:
 
 
 def write(tables: dict, path, metadata: Optional[dict] = None) -> Path:
-    """Write the ratios for ``tools/fitqun/build_scattable_converter.sh``."""
+    """Write the ratios for ``tools/build_scattable_converter.sh``."""
     return scattable.write_hdf5(path, finalise(tables), metadata)

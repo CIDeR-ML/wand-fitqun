@@ -31,11 +31,10 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
-JOBS_DIR = SCRIPT_DIR.parent
-USER_PATHS_DEFAULT = JOBS_DIR / "user_paths.sh"
-LUCID_ROOT = SCRIPT_DIR.resolve().parents[3]
-if str(LUCID_ROOT) not in sys.path:
-    sys.path.insert(0, str(LUCID_ROOT))
+USER_PATHS_DEFAULT = SCRIPT_DIR / "user_paths.sh"
+REPO_ROOT = SCRIPT_DIR.resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from lucid.production.cluster_common import htcondor  # noqa: E402, F401  registers adapter
 from lucid.production.cluster_common import nersc  # noqa: E402, F401  registers adapter
@@ -47,7 +46,7 @@ PDGS = (11, 13, 211)
 
 def build_command(cell_root: Path, pdg: int) -> str:
     """Merge one PDG's cells into the file ``LoadProfiles`` reads."""
-    return (f"python -m lucid.production.fitqun cprofile build "
+    return (f"python -m lucid_fitqun.fitqun cprofile build "
             f"{cell_root}/{pdg}/*/cell.npz --pdg {pdg} "
             f"-o {cell_root}/CProf_{pdg}_WCSim.root")
 
