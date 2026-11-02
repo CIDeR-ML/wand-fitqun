@@ -150,7 +150,7 @@ def main(argv=None):
     print(f"[shotgun] building simulator — detector={args.detector}, "
           f"n_photons={args.n_photons}, mode={args.output_mode}, K={args.K}")
     t0 = time.time()
-    from lucid.production.run_job import DEPOSIT_LEG_BOUND
+    from lucid.production.dataprod.run_job import DEPOSIT_LEG_BOUND
     sim = setup_shotgun_simulator(
         args.detector,
         # the production switch, shared with run_job; forwarded to setup_event_simulator

@@ -23,10 +23,8 @@ REPO_ROOT = SCRIPT_DIR.resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from lucid.production.cluster_common import htcondor  # noqa: E402, F401  registers adapter
-from lucid.production.cluster_common import nersc  # noqa: E402, F401  registers adapter
-from lucid.production.cluster_common.cluster import get_adapter  # noqa: E402
-from lucid.production.cluster_common.user_paths import load_user_paths  # noqa: E402
+from lucid.production.platform.adapters import get_adapter  # noqa: E402
+from lucid.production.platform.user_paths import load_user_paths  # noqa: E402
 
 
 def build_command(sample_root: Path, out_dir: Path) -> str:

@@ -81,7 +81,7 @@ def propagate_and_reduce(
     # The tune describes the light PRODUCTION writes, so this must propagate
     # photons the same way: read the one production switch rather than inherit
     # the library default, which is off.
-    from lucid.production.run_job import DEPOSIT_LEG_BOUND
+    from lucid.production.dataprod.run_job import DEPOSIT_LEG_BOUND
 
     sim = setup_shotgun_simulator(
         detector_config, physics_config=physics_config, n_photons=n_photons,
