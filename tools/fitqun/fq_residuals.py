@@ -7,7 +7,7 @@ as the vertex slides up and down the direction of travel -- so the longitudinal
 and transverse components have different resolutions and, more importantly,
 different biases. Quoting only |dv| averages the two together.
 
-Writes one row per FC event: dL dT dth dpfrac
+Writes one row per event, PC events tagged in the fq_pc column (--require-fc drops them).
 """
 from __future__ import annotations
 import argparse, sys
@@ -29,7 +29,6 @@ def main(argv=None):
     p.add_argument("--step", required=True)
     p.add_argument("--pdg", type=int, default=13)
     p.add_argument("--require-fc", action="store_true")
-    p.add_argument("--all", action="store_true", help="keep PC events too, tagging them")
     p.add_argument("-o", "--out", required=True)
     a = p.parse_args(argv)
 
@@ -75,7 +74,7 @@ def main(argv=None):
 
     np.savetxt(a.out, np.array(rows), fmt="%.6g",
                header="dL_cm dT_cm dtheta_deg dp_frac dwall_cm fq_pc truth_contained")
-    print(f"  wrote {len(rows)} FC events -> {a.out}")
+    print(f"  wrote {len(rows)} events -> {a.out}")
     return 0
 
 if __name__ == "__main__":
