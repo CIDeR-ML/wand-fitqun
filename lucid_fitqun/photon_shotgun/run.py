@@ -84,7 +84,7 @@ def build_parser():
                         "lower variance, but density-estimate semantics.")
     p.add_argument('--expected-value', action='store_true',
                    help="Use expected-value propagator + continuous QE weight "
-                        "(hit_mode='waveform_expected'). Same output shape as "
+                        "(transport and detection 'expected'). Same output shape as "
                         "Bernoulli waveform but with substantially lower MC "
                         "noise — the output is the expected waveform, not a "
                         "per-shot realization. Requires --output-mode waveform.")
@@ -154,7 +154,7 @@ def main(argv=None):
         args.detector,
         physics_config=args.physics_config,
         n_photons=args.n_photons,
-        output_mode=args.output_mode,
+        hits='waveform' if args.output_mode == 'waveform' else 'photon_hits',
         K=args.K,
         window_ns=args.window_ns,
         bin_width_ns=args.bin_ns,
@@ -162,7 +162,8 @@ def main(argv=None):
         smear_time=not args.no_smear_time,
         smear_charge=not args.no_smear_charge,
         wavelength_sampling=args.wavelength_sampling,
-        use_expected_value=args.expected_value,
+        transport='expected' if args.expected_value else 'sampled',
+        detection='expected' if args.expected_value else 'sampled',
     )
     print(f"[shotgun] setup: {time.time()-t0:.1f}s  num_sensors={sim.num_sensors}")
 

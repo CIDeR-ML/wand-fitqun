@@ -80,7 +80,7 @@ def propagate_and_reduce(
 
     sim = setup_shotgun_simulator(
         detector_config, physics_config=physics_config, n_photons=n_photons,
-        output_mode="per_photon", K=K,
+        hits="photon_hits", K=K,
         tts_sigma_ns=tts_sigma_ns, wavelength_sampling=wavelength_sampling)
 
     atten = {"all": np.zeros(attenlength.N_R_BINS),
