@@ -9,6 +9,7 @@ each assertion is the point of the test; the value is just what it says.
 Reference tree: WCSim_v1.12.15/fiTQunTuning/Utilities (``cprofile/*`` live in
 that repo's git history, not its unpacked working tree).
 """
+import os
 import re
 from pathlib import Path
 
@@ -17,11 +18,14 @@ import pytest
 
 from lucid_fitqun.fitqun import binning, cprofile, scattable, timepdf
 
-# The one reference source vendored in-tree; the others are cited by line only.
-MAKEHIST = Path(__file__).resolve().parents[1] / "tools" / "reference" / "makehistWCSim.cc"
+# makehistWCSim.cc is fiTQun's, not ours, so it is not in this repository: FITQUN_MAKEHIST names a copy
+# (fiTQun Utilities' timepdf/makehistWCSim.cc, or the tune's own). The tests that read it skip without it.
+MAKEHIST = Path(os.environ.get("FITQUN_MAKEHIST", ""))
 
 
 def _makehist_source():
+    if not MAKEHIST.is_file():
+        pytest.skip("FITQUN_MAKEHIST does not name makehistWCSim.cc")
     return MAKEHIST.read_text()
 
 

@@ -4,8 +4,8 @@
 carries its own total *and its own clock*, so a rate can be computed from two
 lines alone -- no dependence on file mtime, which AFS and re-created logs make
 unreliable -- and it is flushed so the number is current rather than whatever a
-pipe happens to have released. The reference macros emit the identical line (see
-``tools/reference/PATCHES.md``), so one watcher covers C++ and Python.
+pipe happens to have released. The patched SK tuning macros (kept with fiTQun)
+emit the identical line, so one watcher covers C++ and Python.
 """
 from __future__ import annotations
 

@@ -77,8 +77,7 @@ python3 tools/make_timepdf_grid.py \
 # 3. Check what you have before trying to reconstruct.
 python3 -m lucid_fitqun.fitqun.report $M
 
-# 4. Install and reconstruct.
-bash tools/run_reconstruction.sh <sample-dir> <n-events> <tag>
+# 4. Install and reconstruct (fiTQun's side: the drivers live with fiTQun), then score.
 python3 tools/fq_resolution.py --fq <fq.root> --labl ... --step ... \
         --pdg 13 --require-fc
 ```
@@ -90,8 +89,8 @@ that performance is poor.
 
 ## Things that cost days to find
 
-Each of these fails silently or misleadingly. `tools/reference/PATCHES.md`
-carries the same list for changes that live in the reference tree.
+Each of these fails silently or misleadingly. Changes that live in SK's tuning macros are
+recorded with fiTQun, where those macros are kept.
 
 **Sample and geometry**
 

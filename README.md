@@ -1,17 +1,17 @@
 # LUCiD-fitqun
 
-The fiTQun tuning chain and the photon-shotgun scan app, split out of
-[LUCiD](https://github.com/CIDeR-ML/LUCiD) so that LUCiD carries only the simulator and its
-own applications. Both are applications *of* LUCiD: they import `lucid` and add
-nothing to it.
+The interface between [LUCiD](https://github.com/CIDeR-ML/LUCiD) and fiTQun: the LUCiD side of
+the fiTQun tuning chain (the tuning inputs LUCiD generates, and the conversion of LUCiD output
+into fiTQun's input), and the photon-shotgun scan app. Both are applications *of* LUCiD: they
+import `lucid` and add nothing to it. fiTQun itself, SK's tuning macros, the tune's parameter
+files and the drivers that run fiTQun live with fiTQun, not here.
 
 | path | what it is |
 |---|---|
 | `lucid_fitqun/fitqun/` | generators for fiTQun's tuning inputs (Cherenkov profile, charge PDF, angular response, scattering tables, time PDF), the tune manifest and its report. See its `README.md` |
 | `lucid_fitqun/jobs/` | the HTCondor/Slurm fan-out for those generators, and its configs |
 | `lucid_fitqun/photon_shotgun/` | per-photon and waveform scans with hand-specified photons, with three notebooks |
-| `tools/` | the C++/ROOT and shell steps around fiTQun (`lucid_to_wcsim`, `h5_to_scattable`, time-PDF build, reconstruction, scoring) |
-| `tools/reference/` | the fiTQun / WCSimFQTuner reference sources, patches and the SK_WAND parameter file. **No licence**: see `LICENSES/fiTQun-NO-LICENCE.md`; keep this repository private |
+| `tools/` | LUCiD to fiTQun and back: geometry export (`export_geometry.py`), the WCSim-format converter (`lucid_to_wcsim.cc`), the scattering-table converter (`h5_to_scattable.C`), the direct-light time-PDF samples (`tpdf_direct.py`), the water-transparency reduction (`transparency.py`), and scoring of fiTQun output against LUCiD truth (`fq_residuals.py`, `fq_resolution.py`, `qeeff_summary.py`) |
 | `configs/tpdf/` | the 41 time-PDF sample configs for `lucid-run-job` |
 | `config/` | the two diagnostic SK_WAND physics configs (`_noreflect`, `_scat10x`) and `materials/water_scat10x.json`. They name LUCiD's `materials/water.json` and `pmt/SK_QE.json` relative to their own directory, so copy them into a LUCiD checkout's `config/` to use them |
 
