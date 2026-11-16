@@ -82,35 +82,29 @@ def main() -> int:
     p.add_argument("photonsim_root")
     p.add_argument("out", type=Path)
     p.add_argument("--seed", type=int, required=True)
-    p.add_argument("--geometry", required=True,
-                   help="sensor geometry .npz in the propagator's sensor order (e.g. sk_geometry_detorder.npz)")
     p.add_argument("--n-photons", type=int, default=20000)
     p.add_argument("--batch", type=int, default=8)
     a = p.parse_args()
 
     import jax
-    from lucid.geometry import generate_detector
     from lucid_fitqun.fitqun import isotropic_sample
+    from lucid_fitqun.fitqun.sensors import from_detector_config
     from lucid.simulation.shotgun import setup_shotgun_simulator
     from lucid.sources.shotgun_source import shotgun_source, stack_shotgun_sources
 
-    g = np.load(a.geometry)
-    pmt_cm = g["positions_mm"] / 10.0
-    cyl_r = float(g["radius"]) * 100.0
-    half = float(g["height"]) * 100.0 / 2.0
-    tube_r = float(g["sensor_radius"]) * 100.0
-    pmt_dir = g["directions"].astype(np.float64)
+    # The sensors the simulator reports hits on (sensor_id indexes them), with its normals.
+    s = from_detector_config(DETECTOR_CONFIG)
+    pmt_cm = s.positions_m * 100.0
+    cyl_r = s.radius_m * 100.0
+    half = s.halfheight_m * 100.0
+    tube_r = s.pmt_radius_m * 100.0
+    pmt_dir = s.normals
 
     # Kernel settings of sample_propagate.propagate_and_reduce, which built the 6D table.
     sim = setup_shotgun_simulator(
         DETECTOR_CONFIG, physics_config=PHYSICS_CONFIG, n_photons=a.n_photons,
         hits="photon_hits", K=12, tts_sigma_ns=1.0,
         wavelength_sampling="cherenkov")
-    dev = float(np.abs(np.asarray(generate_detector(DETECTOR_CONFIG).all_points, dtype=np.float64) * 100.0 - pmt_cm).max())
-    print(f"geometry vs propagator sensor positions: max |diff| = {dev:.3f} cm")
-    # The propagator snaps sensors onto the wall (< 3 cm); a wrong order is off by metres.
-    if dev > 10.0:
-        raise SystemExit("geometry file is not in the propagator's sensor order")
 
     h = np.zeros(len(EDGES_CM) - 1)
     hc = np.zeros((len(CONE_R_EDGES_CM) - 1, len(CONE_COS_EDGES) - 1, len(CONE_ZABS_EDGES_CM) - 1))
@@ -152,9 +146,8 @@ def main() -> int:
     for origins_m, directions, event_id in isotropic_sample.load_photons(a.photonsim_root):
         events.update(np.unique(event_id).tolist())
         origins_m = isotropic_sample.translate_uniform(
-            origins_m, rng, det_radius_m=float(g["radius"]),
-            det_halfheight_m=float(g["height"]) / 2.0,
-            pmt_radius_m=float(g["sensor_radius"]), event_id=event_id)
+            origins_m, rng, det_radius_m=s.radius_m, det_halfheight_m=s.halfheight_m,
+            pmt_radius_m=s.pmt_radius_m, event_id=event_id)
         carry_o = np.concatenate([carry_o, origins_m])
         carry_d = np.concatenate([carry_d, directions])
         used = 0

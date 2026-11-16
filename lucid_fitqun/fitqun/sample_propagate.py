@@ -44,7 +44,7 @@ def _chunks(origins: np.ndarray, directions: np.ndarray,
 
 def propagate_and_reduce(
         photonsim_root, shard_out, *, detector_config: str, physics_config: str,
-        geometry, shell_radii_cm, n_photons: int = 20000, K: int = 12,
+        shell_radii_cm, n_photons: int = 20000, K: int = 12,
         seed: int = 0, batch: int = 8, atten_out=None, scat3d_out=None,
         tts_sigma_ns: float = 1.0,
         wavelength_sampling: str = "cherenkov",
@@ -75,14 +75,11 @@ def propagate_and_reduce(
     from lucid.sources.shotgun_source import shotgun_source, stack_shotgun_sources
     from .sample_reduce import ShardBuilder
 
-    g = np.load(geometry)
-    builder = ShardBuilder(
-        pmt_positions_m=g["positions_mm"] / 1000.0,
-        pmt_dir_z=g["directions"][:, 2],
-        det_radius_cm=float(g["radius"]) * 100.0,
-        det_halfheight_cm=float(g["height"]) * 100.0 / 2.0,
-        pmt_radius_cm=float(g["sensor_radius"]) * 100.0,
-        shell_radii_cm=shell_radii_cm)
+    from .sensors import from_detector_config
+
+    # The sensors the simulator reports hits on, so sensor_id indexes them directly.
+    sensors = from_detector_config(detector_config)
+    builder = ShardBuilder.for_sensors(sensors, shell_radii_cm)
 
     sim = setup_shotgun_simulator(
         detector_config, physics_config=physics_config, n_photons=n_photons,
@@ -166,17 +163,17 @@ def propagate_and_reduce(
                 pmt_axes=axes_m,
                 shell_r_cm=float(shell_placement_cm[0]),
                 shell_dr_cm=float(shell_placement_cm[1]),
-                det_radius_m=float(g["radius"]),
-                det_halfheight_m=float(g["height"]) / 2.0,
-                pmt_radius_m=float(g["sensor_radius"]), event_id=event_id)
+                det_radius_m=sensors.radius_m,
+                det_halfheight_m=sensors.halfheight_m,
+                pmt_radius_m=sensors.pmt_radius_m, event_id=event_id)
         else:
             # Each event gets its own vertex, as /gps/pos/type Volume does. The shift is
             # drawn once (same draws as shifting the photons directly) and applied to the
             # photons and to their parents' vertices alike.
             shift = isotropic_sample.translate_uniform(
-                np.zeros_like(origins_m), rng, det_radius_m=float(g["radius"]),
-                det_halfheight_m=float(g["height"]) / 2.0,
-                pmt_radius_m=float(g["sensor_radius"]), event_id=event_id)
+                np.zeros_like(origins_m), rng, det_radius_m=sensors.radius_m,
+                det_halfheight_m=sensors.halfheight_m,
+                pmt_radius_m=sensors.pmt_radius_m, event_id=event_id)
             origins_m = origins_m + shift
             if use_parent:
                 carry_po = np.concatenate([carry_po, photons[3] + shift])

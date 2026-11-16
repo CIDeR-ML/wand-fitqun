@@ -230,6 +230,15 @@ class ShardBuilder:
     here, and drops it.
     """
 
+    @classmethod
+    def for_sensors(cls, sensors, shell_radii_cm: Sequence[float], **kwargs) -> "ShardBuilder":
+        """A builder for the simulator's own sensors (:func:`.sensors.from_detector_config`)."""
+        return cls(pmt_positions_m=sensors.positions_m, pmt_dir_z=sensors.normals[:, 2],
+                   det_radius_cm=sensors.radius_m * M_TO_CM,
+                   det_halfheight_cm=sensors.halfheight_m * M_TO_CM,
+                   pmt_radius_cm=sensors.pmt_radius_m * M_TO_CM,
+                   shell_radii_cm=shell_radii_cm, **kwargs)
+
     def __init__(self, *, pmt_positions_m: np.ndarray, pmt_dir_z: np.ndarray,
                  det_radius_cm: float, det_halfheight_cm: float,
                  pmt_radius_cm: float, shell_radii_cm: Sequence[float],

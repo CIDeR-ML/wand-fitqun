@@ -45,7 +45,6 @@ MASS = {pdg: PDG_MASS_MEV[pdg] for pdg in (11, 13, 211)}   # MeV, by |PDG|
 CONFIG = Path(os.environ.get("LUCID_CONFIG") or Path(importlib.util.find_spec("lucid").origin).parents[1] / "config")
 DETECTOR_CONFIG = str(CONFIG / "SK_WAND_geom_config.json")
 PHYSICS_CONFIG = str(CONFIG / "SK_WAND_physics_config.json")
-GEOMETRY_NPZ = str(CONFIG / "sk_geometry.npz")
 
 
 def primary_direction(tree, entry, pdg_abs):
@@ -81,7 +80,7 @@ def main() -> int:
     import h5py
     import jax
     import uproot
-    from lucid.geometry import generate_detector
+    from lucid_fitqun.fitqun.sensors import from_detector_config
     from lucid.simulation.digitizer import digitize_and_decompose, resolve_model_config
     from lucid.simulation.shotgun import setup_shotgun_simulator
     from lucid.simulation.trigger import TriggerConfig, assign_windows, find_trigger_gates
@@ -92,15 +91,15 @@ def main() -> int:
     phys = json.loads(Path(PHYSICS_CONFIG).read_text())
     model = resolve_model_config({**phys["digitizer"], "dark_rate_khz": 0.0})
     trig = TriggerConfig.from_block(phys["trigger"])
-    g = np.load(GEOMETRY_NPZ)
-    bounds = {"type": "cylinder", "radius": float(g["radius"]), "height": float(g["height"])}
+    sensors = from_detector_config(DETECTOR_CONFIG)
+    bounds = {"type": "cylinder", "radius": sensors.radius_m, "height": 2.0 * sensors.halfheight_m}
 
     nph = a.n_photons
     sim = setup_shotgun_simulator(
         DETECTOR_CONFIG, physics_config=PHYSICS_CONFIG, n_photons=nph,
         hits="photon_hits", K=12, tts_sigma_ns=0.0,
         wavelength_sampling="cherenkov")
-    sensor_pos = np.asarray(generate_detector(DETECTOR_CONFIG).all_points, dtype=np.float32)
+    sensor_pos = np.asarray(sensors.positions_m, dtype=np.float32)
     n_sensors = sensor_pos.shape[0]
 
     rng = np.random.default_rng(a.seed)

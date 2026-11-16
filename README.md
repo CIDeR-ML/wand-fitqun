@@ -46,11 +46,14 @@ themselves, install `lucid_fitqun` into the image or extend that export. The
 job generators read `lucid_fitqun/jobs/user_paths.sh`, copied from one of
 LUCiD's `lucid/production/jobs/user_paths.*.sh.template`.
 
-## Known issue
+## Sensor geometry
 
-H-FQ1: `sample_propagate.propagate_and_reduce` and `__main__._cmd_sample_accumulate`
-build `ShardBuilder` from `sk_geometry.npz` in file order and index it with the
-simulator's `sensor_id`, which is in simulator order (barrel, top, bottom). 0 of
-11,096 rows agree, so the scattering, attenuation and angular tables built on
-this path bin each photon against an unrelated PMT. The tables need rebuilding
-from the simulator's own sensor order (`DetectorGeometry.sensor_points`).
+Every table and every geometry handed to fiTQun uses the sensors as the simulator sees
+them: `lucid_fitqun/fitqun/sensors.py` takes their positions and normals from the
+detector LUCiD builds from its geometry config, and `tools/export_geometry.py` takes
+them from the sensor file the hits come with. A geometry file is never read in their
+place: `sk_geometry.npz` lists the PMTs in another order (no row is the simulator's
+sensor of that index), places half of SK's barrel PMTs 2.87 cm inside the wall the
+simulator snaps them onto, and gives flat-panel normals 1-4 deg off the radial ones the
+propagation uses. `tests/test_fitqun_sensors.py` fires photons at chosen PMTs and checks
+each table files them against the PMT they hit.

@@ -6,64 +6,61 @@ SadQun deliberately does not link numpy or HDF5: the only thing WCSim ever did
 for fiTQun was fill PMTpos/PMTdir/PMTQE, so a text file is enough and keeps the
 container to ROOT alone.
 
-**Pass ``--sensor`` whenever the geometry will be used to interpret hits.**
-A LUCiD sensor file's ``sensor_idx`` indexes that file's own
-``config/sensor_positions``, which is a *different ordering* from
-``sk_geometry.npz``'s ``positions_mm`` -- for SK_WAND not one of the 11096 rows
-agrees, and rows differ by up to 48 m. Writing the npz order while hits carry
-sensor-file indices attributes every hit to an unrelated PMT: the total charge
-stays right, the spatial pattern is destroyed, and a reconstruction returns a
-random vertex and no direction at all. With ``--sensor`` the sensor file's order
-is authoritative and orientations are matched to it by position.
+The geometry is the simulator's, read from the LUCiD sensor file the hits come with
+(``--sensor``): its ``config/sensor_positions`` are the positions the simulator detected
+light at, in the order its ``sensor_idx`` counts. The npz's own order is a different
+permutation (for SK_WAND not one of the 11096 rows agrees; rows differ by up to 48 m), and
+half of its barrel PMTs sit 2.87 cm inside the wall the simulator snaps them onto. The
+normals are the simulator's too: barrel PMTs face the axis and caps face along -z / +z,
+where the npz directions follow flat wall panels, 1-4 deg off. The npz supplies only
+which PMTs are on a cap, the detector dimensions and the QE.
 """
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from lucid_fitqun.fitqun.sensors import radial_normals  # noqa: E402
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("npz", type=Path, help="LUCiD sk_geometry.npz")
     p.add_argument("-o", "--output", type=Path, required=True)
-    p.add_argument("--sensor", type=Path, default=None,
-                   help="a LUCiD wc_sensor_*.h5 whose sensor_idx ordering the "
-                        "output must follow (required if hits will be mapped)")
+    p.add_argument("--sensor", type=Path, required=True,
+                   help="a LUCiD wc_sensor_*.h5: the simulator's sensor positions, in the "
+                        "order its sensor_idx counts")
     p.add_argument("--match-tol-cm", type=float, default=5.0)
-    p.add_argument("--radial-normals", action="store_true",
-                   help="barrel PMTs face the axis and caps face along -z/+z, the normals LUCiD's "
-                        "propagation uses (the npz directions follow flat wall panels, 1-4 deg off)")
     a = p.parse_args()
 
     g = np.load(a.npz)
     pos_cm = g["positions_mm"] / 10.0          # mm -> cm, fiTQun works in cm
     dirs = np.asarray(g["directions"], dtype=np.float64)
 
-    if a.sensor is not None:
-        import h5py
-        with h5py.File(a.sensor, "r") as f:
-            sensor_cm = np.asarray(f["config/sensor_positions"], dtype=np.float64) * 100.0
-        if len(sensor_cm) != len(pos_cm):
-            raise SystemExit(f"sensor file has {len(sensor_cm)} sensors, npz has {len(pos_cm)}")
-        # Reorder the npz to the sensor file's order, matching by position. The two
-        # differ by ~3 cm (float32 storage), so match nearest rather than exactly.
-        from scipy.spatial import cKDTree
-        dist, idx = cKDTree(pos_cm).query(sensor_cm)
-        if dist.max() > a.match_tol_cm:
-            raise SystemExit(f"cannot match sensor to npz geometry: max {dist.max():.1f} cm")
-        if len(set(idx.tolist())) != len(idx):
-            raise SystemExit("sensor-to-npz match is not one-to-one")
-        print(f"{a.sensor.name}: reordered to the sensor file's sensor_idx "
-              f"(max position difference {dist.max():.2f} cm)")
-        pos_cm, dirs = sensor_cm, dirs[idx]
-    if a.radial_normals:
-        barrel = np.abs(dirs[:, 2]) < 0.5
-        rho = np.hypot(pos_cm[:, 0], pos_cm[:, 1])
-        dirs = np.where(barrel[:, None], np.column_stack([-pos_cm[:, 0] / rho, -pos_cm[:, 1] / rho, np.zeros(len(rho))]),
-                        np.column_stack([np.zeros(len(rho)), np.zeros(len(rho)), -np.sign(pos_cm[:, 2])]))
-    qe = g["PMTQE"] if "PMTQE" in g.files else np.ones(len(pos_cm))
+    import h5py
+    with h5py.File(a.sensor, "r") as f:
+        sensor_cm = np.asarray(f["config/sensor_positions"], dtype=np.float64) * 100.0
+    if len(sensor_cm) != len(pos_cm):
+        raise SystemExit(f"sensor file has {len(sensor_cm)} sensors, npz has {len(pos_cm)}")
+    # Which npz row each sensor is, by nearest position: the simulator snapped some
+    # PMTs up to ~3 cm onto the wall, so the match is not exact.
+    from scipy.spatial import cKDTree
+    dist, idx = cKDTree(pos_cm).query(sensor_cm)
+    if dist.max() > a.match_tol_cm:
+        raise SystemExit(f"cannot match sensor to npz geometry: max {dist.max():.1f} cm")
+    if len(set(idx.tolist())) != len(idx):
+        raise SystemExit("sensor-to-npz match is not one-to-one")
+    print(f"{a.sensor.name}: the sensor file's positions and sensor_idx order "
+          f"(max offset from the npz {dist.max():.2f} cm)")
+    on_cap = np.abs(dirs[idx, 2]) >= 0.5
+    pos_cm, dirs = sensor_cm, radial_normals(sensor_cm, on_cap=on_cap)
+    qe = g["PMTQE"][idx] if "PMTQE" in g.files else np.ones(len(pos_cm))
 
     lines = [
         f"n_pmt {len(pos_cm)}",

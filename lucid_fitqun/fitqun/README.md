@@ -96,9 +96,10 @@ recorded with fiTQun, where those macros are kept.
 
 - `sensor_idx` indexes the sensor file's own `config/sensor_positions`, which is a
   *different permutation* from `sk_geometry.npz` -- 0 of 11096 rows in common.
-  Export the geometry with `export_geometry.py --sensor` or every hit is
-  attributed to an unrelated PMT. The symptom is a charge-weighted `<cos>` of
-  about -0.87 where the geometry requires about +0.7.
+  Mapping hits through the npz attributes every hit to an unrelated PMT; the
+  symptom is a charge-weighted `<cos>` of about -0.87 where the geometry
+  requires about +0.7. So sensor positions and normals always come from the
+  simulator (`sensors.py`, and `export_geometry.py --sensor`), never from the npz.
 - The primary is `track_idx == 0`; `primary_track_ids_data` points at a delta ray.
   `primary_energies_data` is **kinetic**.
 

@@ -70,7 +70,7 @@ def _cmd_sample_run(args) -> int:
     from . import sample_propagate
 
     sample_propagate.propagate_and_reduce(
-        args.input, args.output, geometry=args.geometry,
+        args.input, args.output,
         detector_config=str(args.detector_config),
         physics_config=str(args.physics_config),
         shell_radii_cm=args.shells, n_photons=args.n_photons, K=args.K,
@@ -82,15 +82,16 @@ def _cmd_sample_run(args) -> int:
 
 def _cmd_sample_accumulate(args) -> int:
     from . import sample_reduce
+    from .sensors import from_detector_config
 
-    g = np.load(args.geometry)
+    s = from_detector_config(args.detector_config)
     shard = sample_reduce.reduce_shard(
         args.input,
-        pmt_positions_m=g["positions_mm"] / 1000.0,
-        pmt_dir_z=g["directions"][:, 2],
-        det_radius_cm=float(g["radius"]) * 100.0,
-        det_halfheight_cm=float(g["height"]) * 100.0 / 2.0,
-        pmt_radius_cm=float(g["sensor_radius"]) * 100.0,
+        pmt_positions_m=s.positions_m,
+        pmt_dir_z=s.normals[:, 2],
+        det_radius_cm=s.radius_m * 100.0,
+        det_halfheight_cm=s.halfheight_m * 100.0,
+        pmt_radius_cm=s.pmt_radius_m * 100.0,
         shell_radii_cm=args.shells)
     out = shard.save(args.output)
     occ = max(c.occupancy for c in shard.scattered.values())
@@ -188,7 +189,6 @@ def build_parser() -> argparse.ArgumentParser:
     sprop.add_argument("-o", "--output", type=Path, required=True, help="shard .npz")
     sprop.add_argument("--shells", type=float, nargs="+",
                        default=list(binning.ANGRESP_SHELL_RADII_CM))
-    sprop.add_argument("--geometry", type=Path, required=True)
     sprop.add_argument("--detector-config", type=Path, required=True)
     sprop.add_argument("--physics-config", type=Path, required=True)
     sprop.add_argument("--n-photons", type=int, default=20000,
@@ -217,8 +217,9 @@ def build_parser() -> argparse.ArgumentParser:
     sacc = sa_actions.add_parser("accumulate", help="reduce one propagated shard")
     sacc.add_argument("input", type=Path, help="photon-shotgun per-photon HDF5")
     sacc.add_argument("-o", "--output", type=Path, required=True, help="shard .npz")
-    sacc.add_argument("--geometry", type=Path, required=True,
-                      help="detector geometry .npz (positions_mm, directions, ...)")
+    sacc.add_argument("--detector-config", type=Path, required=True,
+                      help="LUCiD detector config the photons were propagated with: the "
+                           "sensor positions and normals come from it")
     sacc.add_argument("--shells", type=float, nargs="+",
                       default=list(binning.ANGRESP_SHELL_RADII_CM),
                       help="angular-response shell radii in cm (default: %(default)s)")

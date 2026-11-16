@@ -50,7 +50,7 @@ from lucid.production.platform.adapters import get_adapter  # noqa: E402
 from lucid.production.platform.user_paths import load_user_paths  # noqa: E402
 
 
-def job_command(*, job_dir: Path, geometry: Path, detector: Path, physics: Path,
+def job_command(*, job_dir: Path, detector: Path, physics: Path,
                 n_photons: int, seed: int, shells,
                 atten: bool = False, scat3d: bool = False) -> str:
     """The one-liner a shard job runs inside the container.
@@ -68,7 +68,7 @@ def job_command(*, job_dir: Path, geometry: Path, detector: Path, physics: Path,
     # configured; fall back to the image's binary otherwise.
     run = f"${{PHOTONSIM_BIN:-/opt/PhotonSim/build/PhotonSim}} {macro}"
     reduce_ = (f"python -m lucid_fitqun.fitqun sample run {root} "
-               f"--geometry {geometry} --detector-config {detector} "
+               f"--detector-config {detector} "
                f"--physics-config {physics} --n-photons {n_photons} "
                f"--shells {shell_args} --seed {seed} -o {shard}"
                + (f" --atten-out {job_dir / 'atten.npz'}" if atten else "")
@@ -110,10 +110,11 @@ def main(argv=None) -> int:
     if shells is None:
         from lucid_fitqun.fitqun import binning
         shells = list(binning.ANGRESP_SHELL_RADII_CM)
-    geometry = Path(cfg["geometry"])
+    if "geometry" in cfg:
+        raise SystemExit(f"{args.config}: drop 'geometry'; the sensors come from detector_config")
     detector = Path(cfg["detector_config"])
     physics = Path(cfg["physics_config"])
-    for path in (geometry, detector, physics):
+    for path in (detector, physics):
         if not path.is_absolute():
             raise SystemExit(f"{path}: config paths must be absolute (the job "
                              "runs from an unspecified cwd inside the container)")
@@ -135,7 +136,7 @@ def main(argv=None) -> int:
 
         body = adapter.render_command_job(
             command=job_command(
-                job_dir=job_dir, geometry=geometry, detector=detector,
+                job_dir=job_dir, detector=detector,
                 physics=physics, n_photons=int(cfg["photons_per_group"]),
                 seed=int(cfg.get("seed_base", 0)) + job_id, shells=shells,
                 atten=bool(cfg.get("write_attenuation", False)),
