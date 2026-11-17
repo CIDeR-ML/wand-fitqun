@@ -2,18 +2,16 @@
 
 The interface between [LUCiD](https://github.com/CIDeR-ML/LUCiD) and fiTQun: the LUCiD side of
 the fiTQun tuning chain (the tuning inputs LUCiD generates, and the conversion of LUCiD output
-into fiTQun's input), and the photon-shotgun scan app. Both are applications *of* LUCiD: they
-import `lucid` and add nothing to it. fiTQun itself, SK's tuning macros, the tune's parameter
-files and the drivers that run fiTQun live with fiTQun, not here.
+into fiTQun's input). It is an application *of* LUCiD: it imports `lucid` and adds nothing to
+it. fiTQun itself, SK's tuning macros, the tune's parameter files, its sample configs and the
+drivers that run fiTQun live with fiTQun, not here; the WAND tune's recipe is the fiTQun fork's
+`sk_wand/REPRODUCE.md`, and this repository holds what that recipe uses, nothing else.
 
 | path | what it is |
 |---|---|
-| `lucid_fitqun/fitqun/` | generators for fiTQun's tuning inputs (Cherenkov profile, charge PDF, angular response, scattering tables, time PDF), the tune manifest and its report. See its `README.md` |
-| `lucid_fitqun/jobs/` | the HTCondor/Slurm fan-out for those generators, and its configs |
-| `lucid_fitqun/photon_shotgun/` | per-photon and waveform scans with hand-specified photons, with three notebooks |
+| `lucid_fitqun/fitqun/` | generators for fiTQun's tuning inputs (Cherenkov profile, charge PDF, angular response, scattering tables) and the tune manifest. See its `README.md` |
+| `lucid_fitqun/jobs/` | `generate_sample_jobs.py`, the HTCondor/Slurm jobs of the electron sample behind the angular and scattering tables |
 | `tools/` | LUCiD to fiTQun and back: geometry export (`export_geometry.py`), the WCSim-format converter (`lucid_to_wcsim.cc`), the scattering-table converter (`h5_to_scattable.C`), the direct-light time-PDF samples (`tpdf_direct.py`), the water-transparency reduction (`transparency.py`), and scoring of fiTQun output against LUCiD truth (`fq_residuals.py`, `fq_resolution.py`, `qeeff_summary.py`) |
-| `configs/tpdf/` | the 41 time-PDF sample configs for `lucid-run-job` |
-| `config/` | the two diagnostic SK_WAND physics configs (`_noreflect`, `_scat10x`) and `materials/water_scat10x.json`. They name LUCiD's `materials/water.json` and `pmt/SK_QE.json` relative to their own directory, so copy them into a LUCiD checkout's `config/` to use them |
 
 ## Origin
 
@@ -43,8 +41,8 @@ Cluster jobs need the same on the worker: the generated commands run
 `python -m lucid_fitqun.fitqun ...`, and LUCiD's HTCondor adapter exports only
 `PYTHONPATH=$LUCID_DEV_PATH`. Until the jobs carry this repository's path
 themselves, install `lucid_fitqun` into the image or extend that export. The
-job generators read `lucid_fitqun/jobs/user_paths.sh`, copied from one of
-LUCiD's `lucid/production/jobs/user_paths.*.sh.template`.
+job generator reads `lucid_fitqun/jobs/user_paths.sh`, copied from one of
+LUCiD's `lucid/production/platform/templates/user_paths.*.sh.template`.
 
 ## Sensor geometry
 

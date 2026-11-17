@@ -9,8 +9,6 @@ checkable by diff:
                                      whose gNphot carries one point per cell
     data/charge_mu_bins.txt          Utilities/chrgpdf/workdir/mutbl.txt
     data/charge_q_bins.txt           Utilities/chrgpdf/workdir/qbins_sk1.txt
-    data/timepdf_momenta.json        recovered from the per-cell job directories
-                                     under WCSim_v1.12.19/Utilities/TuningFiles/timepdf
 
 fiTQun indexes particle types by PDG code and works in **momentum** (MeV/c)
 throughout; the generators convert to kinetic energy per particle when they
@@ -18,7 +16,6 @@ drive the simulation.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import numpy as np
@@ -99,12 +96,6 @@ def charge_q_edges() -> np.ndarray:
     return _read_floats(DATA_DIR / "charge_q_bins.txt")
 
 
-def timepdf_momenta(pdg: int) -> np.ndarray:
-    """Momentum grid the direct-light time PDF is tuned on, for one PDG."""
-    grids = json.loads((DATA_DIR / "timepdf_momenta.json").read_text())
-    return np.array(grids[str(int(pdg))], dtype=np.float64)
-
-
 # --- Cherenkov-profile integral-table axes -----------------------------------
 # Utilities/cprofile/integcprofile.cc: nR0bin=401, nth0bin=201, R0max=5000, with
 # edges R0binEdgs[i]=i*R0max/(nR0bin-1) and th0binEdgs[i]=i*2/(nth0bin-1)-1 --
@@ -145,21 +136,6 @@ def s_edges() -> np.ndarray:
 
 def costh_edges() -> np.ndarray:
     return np.linspace(-1.0, 1.0, N_COSTH_BINS + 1)
-
-
-# --- Direct-light time PDF ---------------------------------------------------
-# htimepdf axes, verbatim from Utilities/timepdf/makehistWCSim.cc:
-#   x = corrected hit time residual (ns), y = log10(predicted charge mu).
-TPDF_T_MIN, TPDF_T_MAX, TPDF_N_T_BINS = -100.0, 100.0, 400
-TPDF_LOGMU_MIN, TPDF_LOGMU_MAX, TPDF_N_LOGMU_BINS = -2.0, 3.0, 125
-
-
-def tpdf_t_edges() -> np.ndarray:
-    return np.linspace(TPDF_T_MIN, TPDF_T_MAX, TPDF_N_T_BINS + 1)
-
-
-def tpdf_logmu_edges() -> np.ndarray:
-    return np.linspace(TPDF_LOGMU_MIN, TPDF_LOGMU_MAX, TPDF_N_LOGMU_BINS + 1)
 
 
 # --- Photosensor angular response --------------------------------------------

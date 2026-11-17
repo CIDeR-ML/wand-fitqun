@@ -9,25 +9,10 @@ each assertion is the point of the test; the value is just what it says.
 Reference tree: WCSim_v1.12.15/fiTQunTuning/Utilities (``cprofile/*`` live in
 that repo's git history, not its unpacked working tree).
 """
-import os
-import re
-from pathlib import Path
-
 import numpy as np
 import pytest
 
-from lucid_fitqun.fitqun import binning, cprofile, scattable, timepdf
-
-# makehistWCSim.cc is fiTQun's, not ours, so it is not in this repository: FITQUN_MAKEHIST names a copy
-# (fiTQun Utilities' timepdf/makehistWCSim.cc, or the tune's own). The tests that read it skip without it.
-MAKEHIST = Path(os.environ.get("FITQUN_MAKEHIST", ""))
-
-
-def _makehist_source():
-    if not MAKEHIST.is_file():
-        pytest.skip("FITQUN_MAKEHIST does not name makehistWCSim.cc")
-    return MAKEHIST.read_text()
-
+from lucid_fitqun.fitqun import binning, cprofile, scattable
 
 # --- scattering table: scatTableLooper.C -------------------------------------
 
@@ -171,32 +156,6 @@ def test_charge_pdf_grids():
 
 # --- time PDF and angular response ------------------------------------------
 
-def test_timepdf_axes():
-    """makehistWCSim.cc:161, read from the vendored file rather than retyped."""
-    m = re.search(r'TH2D htimepdf\("htimepdf","",(\d+),([-\d.]+),([-\d.]+),'
-                  r'(\d+),([-\d.]+),([-\d.]+)\)', _makehist_source())
-    assert m, f"no htimepdf constructor in {MAKEHIST}"
-    nt, tlo, thi, nmu, mlo, mhi = (float(g) for g in m.groups())
-    assert (binning.TPDF_T_MIN, binning.TPDF_T_MAX, binning.TPDF_N_T_BINS) == (tlo, thi, nt)
-    assert (binning.TPDF_LOGMU_MIN, binning.TPDF_LOGMU_MAX,
-            binning.TPDF_N_LOGMU_BINS) == (mlo, mhi, nmu)
-    assert (nt, tlo, thi, nmu, mlo, mhi) == (400, -100.0, 100.0, 125, -2.0, 3.0)
-
-
-def test_time_of_flight_constants():
-    """makehistWCSim.cc:28-29, ``const double c0=29.9792458;//[cm/ns]`` and
-    ``double nwtr=1.38;``: the speed of light and the TOF index the corrected time subtracts
-    with. ``corrected_time``'s default n_water must be the reference's, because fiTQun's
-    reconstruction-time TOF uses the same convention."""
-    import inspect
-    src = _makehist_source()
-    c0 = float(re.search(r"const double c0=([\d.]+);", src).group(1))
-    nwtr = float(re.search(r"double nwtr=([\d.]+);", src).group(1))
-    assert (c0, nwtr) == (29.9792458, 1.38)
-    assert timepdf.C_CM_PER_NS == c0
-    assert inspect.signature(timepdf.corrected_time).parameters["n_water"].default == nwtr
-
-
 def test_pdg_masses():
     """Rest masses in MeV, PDG Review of Particle Physics (2022): e 0.51099895000(15),
     mu 105.6583755(23), pi+- 139.57039(18). Every truth momentum and every macro's kinetic
@@ -259,34 +218,3 @@ def test_names_reproduce_the_shipped_tune():
 
 # --- attenuation length ------------------------------------------------------
 
-def test_attenuation_fit_recovers_a_known_length():
-    """Closure test: photons thrown with a known L must fit back to it.
-
-    The fit is the reference's (AttenLLooper + fit_AttenL): direct/all versus
-    source-PMT distance, fitted as a0*exp(-R/L) with sources kept away from the
-    wall. Injecting the answer is the only way to know the estimator is unbiased,
-    since the quantity has no closed form from the optical model.
-    """
-    from lucid_fitqun.fitqun import attenlength
-
-    rng = np.random.default_rng(7)
-    n = 400_000
-    L_true, a0_true = 7200.0, 0.93
-    R = rng.uniform(0.0, attenlength.R_MAX_CM, n)
-    dwall = rng.uniform(0.0, 1500.0, n)          # ~13% of sources inside the 200 cm cut
-    # Near-wall sources see a much shorter L, as wall-grazing light would; the cut is what keeps
-    # them out. Measured: with the cut L = 7236 cm (0.5% off); no cut 6052 cm (16% low); the cut
-    # inverted keeps only these, ~2000 cm. Either bug fails the 5% closure and the exact count.
-    near = dwall <= attenlength.DWALL_MIN_CM
-    L = np.where(near, 2000.0, L_true)
-    survives = rng.random(n) < a0_true * np.exp(-R / L)
-
-    got = attenlength.measure(R, ~survives, dwall)
-    assert abs(got.length_cm - L_true) / L_true < 0.05, got
-    assert abs(got.a0 - a0_true) < 0.05, got
-
-    # Exactly the sources beyond the cut are histogrammed (every R is inside [0, R_MAX)).
-    _, h_all, h_dir = attenlength.histograms(R, ~survives, dwall)
-    assert h_all.sum() == (~near).sum()
-    assert h_dir.sum() == (~near & survives).sum()
-    assert attenlength.DWALL_MIN_CM == 200.0 and attenlength.R_MAX_CM == 5000.0

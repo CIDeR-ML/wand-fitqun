@@ -19,18 +19,16 @@ LUCiD sample (HTCondor)                  the four generators
   +--> truth.py --> truth.txt              v
   |                                   tune_manifest_<detector>.json
   +--> lucid_to_wcsim --> events.root      |
-                                           +--> report.py  -- tables and plots
                                            +--> install     -- copy to fiTQun's const/
                                            +--> overrides   -- the .parameters.dat scalars
 ```
 
-Three modules carry the contract, and everything else is replaceable:
+Two modules carry the contract, and everything else is replaceable:
 
 | module | answers |
 |---|---|
 | `names.py` | what fiTQun *requires*, and exactly what each file must be called |
 | `manifest.py` | what we *produced*, where it is, and whether it can be trusted |
-| `report.py` | renders the manifest as tables and plots; knows nothing about physics |
 
 **Every generator records its own product in the manifest.** That is the rule
 that keeps this working. Knowledge about an input exists at the moment it is
@@ -58,24 +56,22 @@ filename by hand instead of through `names.py`.
 
 ## Bringing up a new detector
 
+The WAND tune ran these steps as recorded in the fiTQun fork's `sk_wand/REPRODUCE.md`.
+
 ```bash
 source lucid_fitqun/jobs/user_paths.sh
 M=$FITQUN/tune_manifest_<DET>.json
 
 # 1. Samples. One electron bomb feeds the angular response and both scattering
-#    tables; muon/electron momentum grids feed the time PDF.
-python3 -m lucid_fitqun.jobs.generate_sample_jobs \
-        -c lucid_fitqun/jobs/configs/sample_<det>.json -s
-python3 tools/make_timepdf_grid.py \
-        --chart $FITQUN/Utilities/timepdf/chart_13.txt --pdg 13 --scale 0.085 \
-        -o configs/tpdf
+#    tables; tools/tpdf_direct.py makes the direct-light time-PDF samples.
+python3 -m lucid_fitqun.jobs.generate_sample_jobs -c <sample config> -s
 
 # 2. Inputs, in dependency order. Each records itself in $M.
 #    cprofile: genhist -> integcprofile -> fitcprofile -> writecprof  (FOUR steps)
 #    charge PDF, angular response, 6D scattering table, then the time PDF.
 
-# 3. Check what you have before trying to reconstruct.
-python3 -m lucid_fitqun.fitqun.report $M
+# 3. Check what you have before trying to reconstruct: manifest.verify() lists what
+#    is missing, borrowed or unused.
 
 # 4. Install and reconstruct (fiTQun's side: the drivers live with fiTQun), then score.
 python3 tools/fq_resolution.py --fq <fq.root> --labl ... --step ... \

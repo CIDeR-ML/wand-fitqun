@@ -1,70 +1,26 @@
-# fiTQun Cherenkov-profile scan
+# Sample jobs
 
-Cluster fan-out (SLURM or HTCondor — see
-LUCiD's `docs/guides/production/cluster-abstraction.md`)
-for the one fiTQun tuning table that needs a momentum scan of PhotonSim jobs.
+`generate_sample_jobs.py` writes, and with `-s` submits, the jobs of the isotropic 3 MeV
+electron sample behind the angular-response and indirect-light tables (SLURM or HTCondor; see
+LUCiD's `docs/guides/production/cluster-abstraction.md`). Each job runs PhotonSim on a macro
+written at submit time, then `python -m lucid_fitqun.fitqun sample run` (propagation and
+reduction in one pass), then deletes the ROOT file; the shard is all it keeps.
 
-Each cell runs PhotonSim on a macro generated at submit time, reduces the
-photon list to `cell.npz`, and deletes the ROOT file. The reduction is a few
-tens of kB against hundreds of MB of raw photons, so nothing else is kept.
-
-The other four tuning stages don't fan out this way: see
-[`../fitqun/README.md`](../fitqun/README.md).
-
-## Quick start
+The WAND tune's sample is the fiTQun fork's `sk_wand/samples/sample_sk_wand_v4.json`. The
+fork's `tools/scattable/ebomb_jobs.sh` writes those jobs with this script's `job_command`, so
+they run exactly what the script would.
 
 ```bash
-# 1. Configure your paths (shared across all job stages)
-cp $LUCID/lucid/production/jobs/user_paths.lxplus.sh.template user_paths.sh   # on LXPLUS, or
-cp $LUCID/lucid/production/jobs/user_paths.s3df.sh.template   user_paths.sh   # on S3DF
+# 1. Paths, from one of LUCiD's templates
+cp $LUCID/lucid/production/platform/templates/user_paths.lxplus.sh.template user_paths.sh   # or .s3df / .nersc
 vim user_paths.sh
 
-# 2. Smoke test: one cell, 20 events
-python3 generate_jobs.py -c configs/water_mu_test.json -t -s
+# 2. One smoke job, then the whole sample
+python3 generate_sample_jobs.py -c <sample config> -t -s
+python3 generate_sample_jobs.py -c <sample config> -s
 
-# 3. Full scan, one particle at a time
-python3 generate_jobs.py -c configs/water_mu.json -s
-python3 generate_jobs.py -c configs/water_el.json -s
-python3 generate_jobs.py -c configs/water_pi.json -s
-
-# 4. Build the table once the cells are in
-python -m lucid_fitqun.fitqun cprofile build \
-    $OUTPUT_BASE_PATH/fitqun_cprofile/13/*/cell.npz \
-    --pdg 13 -o CProf_13_WCSim.root
+# 3. Merge the shards into the tuning inputs
+python -m lucid_fitqun.fitqun sample build <out>/job_*/shard.npz -o <out>
 ```
 
-Run `generate_jobs.py` with the **host** python3: it submits, and it imports
-only the numpy-free parts of the package so a bare submit host is enough.
-
-Re-running skips cells that already have `cell.npz`; `--no-skip-existing`
-forces them.
-
-## Output layout
-
-```
-<OUTPUT_BASE>/fitqun_cprofile/<pdg>/<p>MeV/
-    photonsim.mac     generated at submit time
-    cell.npz          the reduced profile — the only thing that persists
-    cprofile.sub      the submit description
-```
-
-## Config schema
-
-```json
-{
-  "name": "fitqun_cprofile_mu",
-  "pdgs": [13],
-  "seed_base": 1000,
-  "events_schedule": {"500": 400, "1500": 200, "4000": 100, "1e9": 50},
-  "request_disk_mb": 32768
-}
-```
-
-`events_schedule` maps an upper momentum bound to an event count: photon yield
-grows with track length, so a flat count would over-sample exactly the cells
-that are slow and disk-hungry. `momentum_list_MeV` overrides the reference
-grid (587 points, from `CprofileMomRepList.dat`) with an explicit list —
-that's what the test config does.
-
-`request_disk_mb` matters: PhotonSim writes the whole raw photon list before
-it is reduced.
+Re-running skips jobs that already have `shard.npz`; `--no-skip-existing` forces them.

@@ -243,7 +243,7 @@ class ShardBuilder:
                  det_radius_cm: float, det_halfheight_cm: float,
                  pmt_radius_cm: float, shell_radii_cm: Sequence[float],
                  shell_dr_cm: float = 50.0, n_angular_bins: int = 25):
-        from .angular_driver import sensor_axes
+        from .angular import sensor_axes
 
         self.pmt_pos_cm = np.asarray(pmt_positions_m, dtype=np.float64) * M_TO_CM
         self.pmt_dir_z = np.asarray(pmt_dir_z)

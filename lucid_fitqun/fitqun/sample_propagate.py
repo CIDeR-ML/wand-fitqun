@@ -24,7 +24,7 @@ from typing import Iterator
 
 import numpy as np
 
-from . import attenlength, isotropic_sample, scattable3d
+from . import isotropic_sample, scattable3d
 
 
 def _chunks(origins: np.ndarray, directions: np.ndarray,
@@ -45,7 +45,7 @@ def _chunks(origins: np.ndarray, directions: np.ndarray,
 def propagate_and_reduce(
         photonsim_root, shard_out, *, detector_config: str, physics_config: str,
         shell_radii_cm, n_photons: int = 20000, K: int = 12,
-        seed: int = 0, batch: int = 8, atten_out=None, scat3d_out=None,
+        seed: int = 0, batch: int = 8, scat3d_out=None,
         tts_sigma_ns: float = 1.0,
         wavelength_sampling: str = "cherenkov",
         shell_placement_cm=None, table_source: str = "parent") -> Path:
@@ -64,12 +64,6 @@ def propagate_and_reduce(
     Propagation always uses the photon's own origin and direction. Shell-placement runs
     (whose tables are not used) always use ``"photon"``.
     """
-    """``atten_out`` additionally writes the water attenuation-length histograms.
-
-    They are kept in a side file rather than in the shard because the shard
-    format is already consumed by the verified scattering-table build, and the
-    per-photon distances these need exist only inside this loop.
-    """
     import jax
     from lucid.simulation.shotgun import setup_shotgun_simulator
     from lucid.sources.shotgun_source import shotgun_source, stack_shotgun_sources
@@ -86,8 +80,6 @@ def propagate_and_reduce(
         hits="photon_hits", K=K,
         tts_sigma_ns=tts_sigma_ns, wavelength_sampling=wavelength_sampling)
 
-    atten = {"all": np.zeros(attenlength.N_R_BINS),
-             "direct": np.zeros(attenlength.N_R_BINS)}
     # A dict, not two names: `_flush` is nested, and an augmented assignment
     # to an enclosing name would rebind it as a local (UnboundLocalError).
     _i, _d = scattable3d.empty()
@@ -117,9 +109,8 @@ def propagate_and_reduce(
         builder.add(detected=det_np, sensor_id=sid_np, indirect=ind_np,
                     emission_pos_m=origins_np,
                     emission_dir=np.asarray(batched.directions), **src_kw)
-        # Both side outputs need the same per-photon geometry, which exists
-        # only here, so compute it once and fan out.
-        if atten_out is not None or scat3d_out is not None:
+        # The 3D table needs the per-photon geometry, which exists only here.
+        if scat3d_out is not None:
             d = det_np.reshape(-1).astype(bool)
             if d.any():
                 src = origins_np.reshape(-1, 3)[d] * 100.0          # cm
@@ -129,14 +120,9 @@ def propagate_and_reduce(
                 R, costh, dwall = scattable3d.observables(
                     src, sdir, pmt, det_radius_cm=builder.det_radius_cm,
                     det_halfheight_cm=builder.det_halfheight_cm)
-                if atten_out is not None:
-                    _, ha, hd = attenlength.histograms(R, ind, dwall)
-                    atten["all"] += ha
-                    atten["direct"] += hd
-                if scat3d_out is not None:
-                    h3, h2 = scattable3d.histograms(R, costh, dwall, ind)
-                    scat3d["indirect"] += h3
-                    scat3d["direct"] += h2
+                h3, h2 = scattable3d.histograms(R, costh, dwall, ind)
+                scat3d["indirect"] += h3
+                scat3d["direct"] += h2
         return key
 
     carry_o = np.zeros((0, 3), dtype=np.float32)
@@ -149,7 +135,7 @@ def propagate_and_reduce(
     # from a volume-uniform production's.
     axes_m = None
     if shell_placement_cm is not None:
-        from .angular_driver import sensor_axes
+        from .angular import sensor_axes
         axes_m = sensor_axes(
             builder.pmt_pos_cm,
             det_radius_cm=builder.det_radius_cm,
@@ -196,13 +182,6 @@ def propagate_and_reduce(
         if use_parent:
             carry_po, carry_pd = carry_po[used:], carry_pd[used:]
     _flush(pending, key)
-
-    if atten_out is not None:
-        edges = np.linspace(0.0, attenlength.R_MAX_CM, attenlength.N_R_BINS + 1)
-        np.savez_compressed(atten_out, edges=edges,
-                            h_all=atten["all"], h_direct=atten["direct"])
-        print(f"{atten_out}: attenuation histograms, "
-              f"{atten['all'].sum():,.0f} photons ({atten['direct'].sum():,.0f} direct)")
 
     if scat3d_out is not None:
         er, ew, ec = scattable3d.edges()

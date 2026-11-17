@@ -10,9 +10,8 @@ new detector or water model:
 
 Every generator records its own product, so the manifest is written where the
 knowledge is rather than reconstructed afterwards by a script that greps for
-files. Consumers are deliberately dumb: the report tool plots whatever the
-manifest lists, and the install step copies ``path`` to ``install_as`` without
-knowing what any of it means.
+files. Consumers are deliberately dumb: the install step copies ``path`` to
+``install_as`` without knowing what any of it means.
 
 ``status`` is the reason this is worth having. A tune is never simply finished --
 it carries borrowed files and untuned scalars for a while -- so the state of each
@@ -47,7 +46,7 @@ from . import names
 SCHEMA = 1
 
 #: Anything not ``adopted`` is a difference between this tune and a fully tuned
-#: one, which is what ``verify`` reports and the report tool highlights.
+#: one, which is what ``verify`` reports.
 STATUSES = ("adopted", "borrowed", "measured_not_adopted",
             "reference_default", "missing")
 

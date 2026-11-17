@@ -3,13 +3,13 @@
 fiTQun reconstructs a water-Cherenkov event by comparing it against an
 analytic prediction of the charge and time at every PMT. That prediction is
 driven by five tuned tables, and this package produces the LUCiD-derived
-inputs to each of them:
+inputs to four of them (the direct-light time-PDF samples come from
+``tools/tpdf_direct.py``):
 
     cprofile   Cherenkov emission profile and its integral tables (from
                PhotonSim; particle + water only, no detector)
     chargepdf  photosensor charge response f(q | mu) (from LUCiD's digitizer)
     angular    photosensor angular response epsilon(cos eta)
-    timepdf    direct-light time residual vs predicted charge
     scattable  indirect (scattered and reflected) light tables
 
 The boundary is deliberate: each module writes the file the corresponding
@@ -26,9 +26,8 @@ LUCiD detector/physics config pair, so the same code serves SK and HK.
 # where uproot and numpy need not be installed, and only needs `macros`.
 import importlib
 
-_SUBMODULES = ("angular", "angular_driver", "binning", "chargepdf", "cprofile",
-               "isotropic_sample", "macros", "scattable_driver", "particles", "rootio", "scattable",
-               "timepdf")
+_SUBMODULES = ("angular", "binning", "chargepdf", "cprofile",
+               "isotropic_sample", "macros", "scattable_driver", "particles", "rootio", "scattable")
 
 __all__ = list(_SUBMODULES)
 

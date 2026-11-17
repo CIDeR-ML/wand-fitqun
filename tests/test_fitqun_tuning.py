@@ -10,7 +10,7 @@ form.
 import numpy as np
 import pytest
 
-from lucid_fitqun.fitqun import angular, binning, cprofile, rootio, scattable, timepdf
+from lucid_fitqun.fitqun import angular, binning, cprofile, rootio, scattable
 
 uproot = pytest.importorskip("uproot")
 
@@ -229,58 +229,6 @@ def test_angular_rejects_inconsistent_detector_extent():
 
 # --- time PDF ----------------------------------------------------------------
 
-def test_corrected_time_is_zero_for_light_from_the_midpoint():
-    """A photon emitted at the track midpoint travelling straight to the PMT
-    at the group velocity has, by construction, t_c = 0 (makehistWCSim.cc:284,
-    ``tc = t - t0 - RmidPMT*nwtr/c0 - smid/c0`` with smid = smax/2 at :158).
-
-    The expectation uses the reference's literal c0 = 29.9792458 cm/ns and
-    nwtr = 1.38 (:28-29), and corrected_time is called with its defaults, so a
-    wrong-unit c or a different default index fails here.
-    """
-    c0, nwtr = 29.9792458, 1.38
-    vertex = np.array([0.0, 0.0, 0.0])
-    direction = np.array([0.0, 0.0, 1.0])
-    s_max = 200.0
-    pmt = np.array([[300.0, 0.0, 100.0]])
-
-    mid = vertex + 0.5 * s_max * direction
-    r_mid = np.linalg.norm(pmt[0] - mid)            # 300 cm: the PMT is level with the midpoint
-    t_hit = 0.5 * s_max / c0 + r_mid * nwtr / c0    # 3.3356 + 13.8092 ns
-
-    tc = timepdf.corrected_time(np.array([t_hit, t_hit + 3.0]), pmt, vertex_cm=vertex,
-                                direction=direction, s_max_cm=s_max)
-    np.testing.assert_allclose(tc, [0.0, 3.0], atol=1e-9)
-    # The event's emission time is subtracted, not added.
-    tc0 = timepdf.corrected_time(np.array([t_hit + 5.0]), pmt, vertex_cm=vertex,
-                                 direction=direction, s_max_cm=s_max, t0_ns=5.0)
-    np.testing.assert_allclose(tc0, [0.0], atol=1e-9)
-
-
-def test_timepdf_accumulator_bins_and_merges(tmp_path):
-    acc = timepdf.TimePdfAccumulator()
-    acc.fill(np.array([0.0, 10.0, 10.0]), np.array([1.0, 100.0, 0.0]))
-    # mu = 0 has no log10 and is dropped, so two hits survive.
-    assert acc.counts.sum() == 2
-
-    other = timepdf.TimePdfAccumulator()
-    other.fill(np.array([0.0]), np.array([1.0]))
-    merged = acc + other
-    assert merged.counts.sum() == 3
-    assert merged.n_events == 2
-
-    out = merged.write(tmp_path / "cell_hist.root")
-    with uproot.open(out) as f:
-        assert f.classnames() == {"htimepdf;1": "TH2D"}
-        h = f["htimepdf"]
-        assert h.axis(0).low == -100.0 and h.axis(0).high == 100.0
-        assert h.axis(1).low == -2.0 and h.axis(1).high == 3.0
-
-
-def test_cell_name_matches_reference_layout():
-    assert timepdf.cell_name(11, 1000.0, 3) == "11_1000_0_3_0"
-
-
 # --- scattering tables -------------------------------------------------------
 
 def test_scattable_index_order_is_dimension_zero_fastest():
@@ -371,8 +319,6 @@ def test_reference_grids_load():
     labels = binning.charge_mu_labels()
     assert len(labels) == len(mu) and "1.0" in labels and "0.1" in labels
 
-    for pdg in (11, 13, 211):
-        assert len(binning.timepdf_momenta(pdg)) > 40
 
 
 def test_kinetic_energy_matches_the_reference_macro():
@@ -510,32 +456,10 @@ def test_charge_pdf_filenames_match_the_reference_spelling(tmp_path):
 
 # --- cluster fan-out ----------------------------------------------------------
 
-def test_profile_cell_command_has_no_nested_quotes():
-    import pathlib
-    from lucid_fitqun.jobs import generate_jobs
-
-    cmd = generate_jobs.cell_command(cell_dir=pathlib.Path("/out/cell"),
-                                     pdg=13, momentum=1200.0)
-    assert '"' not in cmd and "'" not in cmd
-    # The raw ROOT file is only removed once the reduced cell exists.
-    assert cmd.index("cprofile accumulate") < cmd.index("rm -f")
-
-
-def test_events_schedule_ladder():
-    from lucid_fitqun.jobs.generate_jobs import events_for
-    schedule = {"500": 400, "1500": 200, "1e9": 50}
-    assert events_for(300, schedule) == 400
-    assert events_for(500, schedule) == 400      # inclusive upper bound
-    assert events_for(501, schedule) == 200
-    assert events_for(9000, schedule) == 50
-
-
 # --- angular-response driver --------------------------------------------------
 
 def test_sensor_axes_point_inward():
     """A sensor's axis must face into the water, or every cos(eta) flips sign."""
-    from lucid_fitqun.fitqun import angular_driver as ad
-
     R, H = 1690.0, 1810.0
     pos = np.array([
         [R, 0.0, 0.0],        # barrel, +x wall  -> axis -x
@@ -543,40 +467,11 @@ def test_sensor_axes_point_inward():
         [100.0, 0.0, H],      # top cap          -> axis -z
         [100.0, 0.0, -H],     # bottom cap       -> axis +z
     ])
-    axes = ad.sensor_axes(pos, det_radius_cm=R, det_halfheight_cm=H)
+    axes = angular.sensor_axes(pos, det_radius_cm=R, det_halfheight_cm=H)
     np.testing.assert_allclose(axes[0], [-1, 0, 0], atol=1e-6)
     np.testing.assert_allclose(axes[1], [0, 1, 0], atol=1e-6)
     np.testing.assert_allclose(axes[2], [0, 0, -1], atol=1e-6)
     np.testing.assert_allclose(axes[3], [0, 0, 1], atol=1e-6)
-
-
-def test_angular_driver_keeps_only_direct_light():
-    """The reference skips isct != 0; here that is the indirect flag."""
-    from lucid_fitqun.fitqun import angular_driver as ad
-
-    R, H = 1690.0, 1810.0
-    # Positions go in as meters (LUCiD's convention); the cm grid args are
-    # fiTQun's and stay as they are.
-    sensors = np.array([[0.0, R, 0.0]]) / 100.0
-    # Four photons head-on at the shell radius; two of them scattered.
-    emission = np.tile([0.0, (R - 100.0) / 100.0, 0.0], (4, 1))
-    chunk = {
-        "emission_pos": emission,
-        "sensor_id": np.zeros(4, dtype=int),
-        "detected": np.ones(4, dtype=bool),
-        "indirect": np.array([False, True, False, True]),
-    }
-    _, counts, _ = ad.accumulate(
-        [chunk], sensors, shell_r_cm=100.0, det_radius_cm=R,
-        det_halfheight_cm=H)
-    assert counts.sum() == 2                      # the two direct ones
-    assert counts[-1] == 2                        # head-on -> top cos(eta) bin
-
-    # Without the flag, asking for direct light is an error rather than a
-    # silent pass-through of indirect photons into the tune.
-    with pytest.raises(ValueError, match="indirect"):
-        ad.accumulate([{**chunk, "indirect": None}], sensors, shell_r_cm=100.0,
-                      det_radius_cm=R, det_halfheight_cm=H)
 
 
 # --- scattering-table driver --------------------------------------------------

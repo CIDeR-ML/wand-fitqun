@@ -17,7 +17,7 @@ does not, and the angular response is built out of the correlation structure. A
 6.4e10-photon run done that way gave an angular response 3-10x noisier than
 Poisson.
 
-Each job is a chain, the way the Cherenkov-profile cells are:
+Each job is a chain:
 
     PhotonSim -> propagate and reduce in one pass -> delete the ROOT
 
@@ -27,9 +27,11 @@ them back cost that much I/O per job and, with a few hundred jobs doing it at
 once, failed outright: EOS returned ``errno 121`` mid-write for ~4% of a
 250-job run. Now the only thing a job writes is its shard.
 
-Run it like its sibling:
+Run it on a sample config (the WAND tune's is the fiTQun fork's
+``sk_wand/samples/sample_sk_wand_v4.json``, whose ``ebomb_jobs.sh`` calls
+:func:`job_command` directly):
 
-    ./generate_sample_jobs.py -c configs/sample_e3mev_test.json -t -s
+    ./generate_sample_jobs.py -c <sample config> -t -s
     python -m lucid_fitqun.fitqun sample build <out>/job_*/shard.npz -o <out>
 """
 from __future__ import annotations
@@ -52,7 +54,7 @@ from lucid.production.platform.user_paths import load_user_paths  # noqa: E402
 
 def job_command(*, job_dir: Path, detector: Path, physics: Path,
                 n_photons: int, seed: int, shells,
-                atten: bool = False, scat3d: bool = False) -> str:
+                scat3d: bool = False) -> str:
     """The one-liner a shard job runs inside the container.
 
     The macro is written host-side at submit time, so this stays free of nested
@@ -71,7 +73,6 @@ def job_command(*, job_dir: Path, detector: Path, physics: Path,
                f"--detector-config {detector} "
                f"--physics-config {physics} --n-photons {n_photons} "
                f"--shells {shell_args} --seed {seed} -o {shard}"
-               + (f" --atten-out {job_dir / 'atten.npz'}" if atten else "")
                + (f" --scattable3d-out {job_dir / 'scat3d.npz'}" if scat3d else ""))
     cleanup = f"rm -f {root}"
     return " && ".join([run, reduce_, cleanup])
@@ -139,7 +140,6 @@ def main(argv=None) -> int:
                 job_dir=job_dir, detector=detector,
                 physics=physics, n_photons=int(cfg["photons_per_group"]),
                 seed=int(cfg.get("seed_base", 0)) + job_id, shells=shells,
-                atten=bool(cfg.get("write_attenuation", False)),
                 scat3d=bool(cfg.get("write_scattable3d", False))),
             cell_dir=job_dir, job_name=f"{cfg['name']}_{job_id:06d}",
             log_stem=f"job_{job_id:06d}", partition=partition,

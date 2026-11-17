@@ -151,3 +151,24 @@ def write_angular_response(path, edges, counts, sumw2, *, shell_r_cm: float) -> 
         name, edges, values, sumw2=errs, dtype=np.float32,
         title="Angular response function", xtitle="cos#eta")})
     return Path(path)
+
+
+def sensor_axes(sensor_positions: np.ndarray, *, det_radius_cm: float,
+                det_halfheight_cm: float, tol_cm: float = 1.0) -> np.ndarray:
+    """Inward-facing unit axis for each sensor of a cylinder.
+
+    A sensor on an end cap points along -sign(z); one on the barrel points at
+    the axis. Which surface a sensor is on is decided by how close it sits to
+    each, so a geometry whose sensors are inset still classifies correctly.
+    """
+    pos = np.asarray(sensor_positions, dtype=np.float64)
+    rho = np.hypot(pos[:, 0], pos[:, 1])
+    on_cap = (det_halfheight_cm - np.abs(pos[:, 2])) < (det_radius_cm - rho) - tol_cm
+
+    axes = np.zeros_like(pos)
+    axes[on_cap, 2] = -np.sign(pos[on_cap, 2])
+    barrel = ~on_cap
+    safe_rho = np.where(rho[barrel] > 0, rho[barrel], 1.0)
+    axes[barrel, 0] = -pos[barrel, 0] / safe_rho
+    axes[barrel, 1] = -pos[barrel, 1] / safe_rho
+    return axes

@@ -74,7 +74,7 @@ def _cmd_sample_run(args) -> int:
         detector_config=str(args.detector_config),
         physics_config=str(args.physics_config),
         shell_radii_cm=args.shells, n_photons=args.n_photons, K=args.K,
-        seed=args.seed, atten_out=args.atten_out,
+        seed=args.seed,
         scat3d_out=args.scattable3d_out,
         shell_placement_cm=args.shell_placement, table_source=args.table_source)
     return 0
@@ -195,9 +195,6 @@ def build_parser() -> argparse.ArgumentParser:
                        help="photons per kernel call; a batching unit only")
     sprop.add_argument("--K", type=int, default=12)
     sprop.add_argument("--seed", type=int, default=0)
-    sprop.add_argument("--atten-out", type=Path, default=None,
-                       help="also write the water attenuation-length histograms "
-                            "(direct/all vs source-PMT distance) to this .npz")
     sprop.add_argument("--scattable3d-out", type=Path, default=None,
                        help="also write fiTQun's 3D scattering table histograms "
                             "(hsct3d / hdir2d) to this .npz")
